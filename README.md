@@ -1,1 +1,1 @@
-# Proyecto-de-pr-cticas-Asistente-de-BI-con-Exploraci-n-de-Datos-Interactiva-GenBI-.
+# Proyecto de prácticas, Asistente de BI con Exploración de Datos Interactiva GenBI.
