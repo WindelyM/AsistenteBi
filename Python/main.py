@@ -1,67 +1,56 @@
-# FastAPI y dependencias
 from fastapi import FastAPI, HTTPException, Depends
 from typing import Annotated, List
-
-# Pydantic para validación
-from pydantic import BaseModel
-
-#importar pandas para usar pd.DataFrame
-import pandas as pd
-
-# Modelos y base de datos
 import models
 from database import engine, SessionLocal
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
+import pandas as pd  # Para manipulación y limpieza de datos
 
-# Crear la app de FastAPI
 app = FastAPI()
 
-# Crear todas las tablas en la base de datos (si no existen)
+# Crear las tablas definidas en models.py si no existen
 models.Base.metadata.create_all(bind=engine)
 
-# Modelos de datos Pydantic
+# Definición de modelos Pydantic para validación de datos entrantes
 
-# Estructura de una opción
 class ChoiceBase(BaseModel):
     choice_text: str
     is_correct: bool
 
-# Estructura de una pregunta
 class QuestionBase(BaseModel):
     question_text: str
-    choices: List[ChoiceBase]  # Lista de opciones
+    choices: List[ChoiceBase]
 
+# Modelo para recibir la consulta SQL en el endpoint /query
+class QueryRequest(BaseModel):
+    query: str
 
-# Dependencias
-
-# Función que devuelve una sesión de DB
+# Función que crea y cierra la sesión de base de datos para cada petición
 def get_db():
     db = SessionLocal()
     try:
-        yield db  # yield -> permite usarla como dependencia
+        yield db
     finally:
-        db.close()  # cerrar al terminar
+        db.close()
 
-# Tipado de dependencia: indica que db será una Session obtenida con Depends(get_db)
+# Tipado de dependencia para pasar la sesión de base de datos a los endpoints
 db_dependency = Annotated[Session, Depends(get_db)]
 
-# Endpoints
-
-# Crear pregunta con sus opciones
+# Endpoint para crear preguntas con sus opciones
 @app.post("/questions/")
 async def create_questions(
     question: QuestionBase,
     db: db_dependency
 ):
-    # Crear registro de pregunta
+    # Crear objeto Question en la base de datos
     db_question = models.Questions(
         question_text=question.question_text
     )
     db.add(db_question)
     db.commit()
-    db.refresh(db_question)  # refrescar para obtener ID autogenerado
+    db.refresh(db_question)  # Refrescar para obtener el ID generado
 
-    # Crear opciones y relacionarlas con la pregunta
+    # Crear las opciones relacionadas a la pregunta
     for choice in question.choices:
         db_choice = models.Choices(
             choice_text=choice.choice_text,
@@ -70,50 +59,45 @@ async def create_questions(
         )
         db.add(db_choice)
 
-    # Guardar todas las opciones en la DB
+    # Guardar todas las opciones en la base de datos
     db.commit()
 
     return {"message": "Pregunta creada correctamente"}
 
-# Endpoint que recibe SQL crudo
+# Endpoint para ejecutar consultas SQL SELECT arbitrarias y devolver resultado JSON
 
-@app.post("/query/")
-async def execute_query(
-    query: str,
-    db: db_dependency
-):
+@app.post("/query")
+async def execute_query(request: QueryRequest, db: db_dependency):
 
-   #Ejecuta un SQL SELECT, limpia datos con Pandas y devuelve JSON para frontend.
+    #Ejecuta un SQL crudo enviado en el request y devuelve los resultados
+    #como JSON legible, usando Pandas para limpieza.
     
-    # Validar solo SELECT
-    if not query.strip().lower().startswith("select"):
-        raise HTTPException(status_code=400, detail="Solo se permiten consultas SELECT")
-
     try:
-        # Ejecutar la consulta
-        result = db.execute(query)
+        # Ejecutamos el SQL y obtenemos los resultados
+        result = db.execute(request.query)
+        # Convertimos a lista de diccionarios
+        rows = [dict(row) for row in result]
 
-        # Convertir resultado a lista de diccionarios
-        rows = [dict(row) for row in result.fetchall()]
-
-        # Crear DataFrame de Pandas
+        # Convertimos a DataFrame de Pandas para limpieza
         df = pd.DataFrame(rows)
 
-        # Limpieza de datos
-
         if not df.empty:
-            # Reemplazar nulos por cadena vacía
-            df = df.fillna("")
+            # Llenar valores nulos con cadena vacía
+            df.fillna("", inplace=True)
 
-            # Convertir columnas datetime a string ISO
-            for col in df.select_dtypes(include=["datetime64[ns]"]):
+            # Formatear columnas datetime si existen
+            for col in df.select_dtypes(include=['datetime64[ns]']).columns:
                 df[col] = df[col].dt.strftime("%Y-%m-%d %H:%M:%S")
 
-        # Convertir de nuevo a lista de diccionarios
-        cleaned_rows = df.to_dict(orient="records")
+        # Convertimos de nuevo a JSON orientado a registros
+        json_result = df.to_dict(orient="records")
 
-        return {"data": cleaned_rows}
+        # Retornamos JSON con datos y sugerencia de gráfico
+        return {
+            "data": json_result,
+            "suggested_chart": "table"  # Frontend puede usar "bar", "line", etc.
+        }
 
     except Exception as e:
-        # Capturar errores y devolver mensaje
-        raise HTTPException(status_code=400, detail=f"Error ejecutando SQL: {str(e)}")
+        # Capturamos cualquier error y devolvemos HTTP 400
+        raise HTTPException(status_code=400, detail=str(e))
