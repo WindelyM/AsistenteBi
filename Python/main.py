@@ -4,6 +4,7 @@ from typing import Annotated, List
 import models
 from database import engine, SessionLocal
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from pydantic import BaseModel
 import pandas as pd  # Para manipulación y limpieza de datos
 
@@ -11,6 +12,11 @@ app = FastAPI()
 
 # Crear las tablas definidas en models.py 
 models.Base.metadata.create_all(bind=engine)
+
+#nueva ruta para que no me salga el errror de Cannot GET
+@app.get("/")
+def home():
+    return {"status": "API Online", "docs": "/docs"}
 
 # Definición de clases de Python para validar, definir y serializar los datos entrantes
 
@@ -69,36 +75,23 @@ async def create_questions(
 
 @app.post("/query")
 async def execute_query(request: QueryRequest, db: db_dependency):
-
-    #Ejecuta un SQL crudo enviado en la petición y devuelve los resultados
-    #como JSON legible, usando Pandas para limpieza.
-    
     try:
-        # Ejecutamos el SQL y obtenemos los resultados
-        result = db.execute(request.query)
-        # Convertimos a lista de diccionarios
-        rows = [dict(row) for row in result]
+        # Usamos text() y mappings() para compatibilidad con Pandas
+        result = db.execute(text(request.query))
+        rows = result.mappings().all() 
 
-        # Convertimos a DataFrame de Pandas para limpieza
         df = pd.DataFrame(rows)
 
         if not df.empty:
-            # Llenar valores nulos con cadena vacía
             df.fillna("", inplace=True)
-
-            # Formatear columnas datetime si existen
             for col in df.select_dtypes(include=['datetime64[ns]']).columns:
                 df[col] = df[col].dt.strftime("%Y-%m-%d %H:%M:%S")
 
-        # Convertimos de nuevo a JSON orientado a registros
         json_result = df.to_dict(orient="records")
 
-        # Retornamos JSON con datos y sugerencia de gráfico
         return {
             "data": json_result,
-            "suggested_chart": "table"  # Frontend puede usar "bar", "line", etc.
+            "suggested_chart": "table"
         }
-
     except Exception as e:
-        # Capturamos cualquier error y devolvemos HTTP 400 si lo hubiese
         raise HTTPException(status_code=400, detail=str(e))
