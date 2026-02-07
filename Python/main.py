@@ -1,5 +1,6 @@
-from fastapi import FastAPI, HTTPException, Depends
-from typing import Annotated, List
+#importamos las librerias, y archivos necesarios
+from fastapi import FastAPI, HTTPException, Depends #para hacer apis
+from typing import Annotated, List 
 import models
 from database import engine, SessionLocal
 from sqlalchemy.orm import Session
@@ -8,20 +9,20 @@ import pandas as pd  # Para manipulación y limpieza de datos
 
 app = FastAPI()
 
-# Crear las tablas definidas en models.py si no existen
+# Crear las tablas definidas en models.py 
 models.Base.metadata.create_all(bind=engine)
 
-# Definición de modelos Pydantic para validación de datos entrantes
+# Definición de clases de Python para validar, definir y serializar los datos entrantes
 
 class ChoiceBase(BaseModel):
-    choice_text: str
-    is_correct: bool
+    choice_text: str    #admite solo texto
+    is_correct: bool    #si son aptas
 
 class QuestionBase(BaseModel):
     question_text: str
     choices: List[ChoiceBase]
 
-# Modelo para recibir la consulta SQL en el endpoint /query
+# Modelo para recibir la consulta SQL para que el cliente interactue con el servidor
 class QueryRequest(BaseModel):
     query: str
 
@@ -33,7 +34,7 @@ def get_db():
     finally:
         db.close()
 
-# Tipado de dependencia para pasar la sesión de base de datos a los endpoints
+# Definimos el tipo de datos para pasar la sesión de base de datos a los endpoints
 db_dependency = Annotated[Session, Depends(get_db)]
 
 # Endpoint para crear preguntas con sus opciones
@@ -42,7 +43,7 @@ async def create_questions(
     question: QuestionBase,
     db: db_dependency
 ):
-    # Crear objeto Question en la base de datos
+    # Crear objeto Question(preguntas) en la base de datos
     db_question = models.Questions(
         question_text=question.question_text
     )
@@ -64,12 +65,12 @@ async def create_questions(
 
     return {"message": "Pregunta creada correctamente"}
 
-# Endpoint para ejecutar consultas SQL SELECT arbitrarias y devolver resultado JSON
+# Endpoint para ejecutar consultas SQL (solo SELECT por seguridad) y devolver JSON
 
 @app.post("/query")
 async def execute_query(request: QueryRequest, db: db_dependency):
 
-    #Ejecuta un SQL crudo enviado en el request y devuelve los resultados
+    #Ejecuta un SQL crudo enviado en la petición y devuelve los resultados
     #como JSON legible, usando Pandas para limpieza.
     
     try:
@@ -99,5 +100,5 @@ async def execute_query(request: QueryRequest, db: db_dependency):
         }
 
     except Exception as e:
-        # Capturamos cualquier error y devolvemos HTTP 400
+        # Capturamos cualquier error y devolvemos HTTP 400 si lo hubiese
         raise HTTPException(status_code=400, detail=str(e))

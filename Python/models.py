@@ -1,4 +1,4 @@
-# Importamos tipos de columnas y base
+# Importamos tipos datos de mysql las de columnas y la base de datos
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, String
 from database import Base
 
@@ -15,5 +15,5 @@ class Choices(Base):
 
     id = Column(Integer, primary_key=True, index=True)           # ID autoincremental
     choice_text = Column(String, index=True)                     # Texto de la opción
-    is_correct = Column(Boolean, default=False)                 # Si es correcta o no
-    question_id = Column(Integer, ForeignKey("questions.id"))   # Relación con pregunta
+    is_correct = Column(Boolean, default=False)                  # Si es correcta o no
+    question_id = Column(Integer, ForeignKey("questions.id"))    # Relación con pregunta
