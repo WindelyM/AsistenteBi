@@ -1,0 +1,13 @@
+.logo-bi {
+  height: 60px !important; /* Arregla el tamaño enorme */
+  width: auto !important;
+  display: block;
+  margin: 0 auto 20px auto;
+}
+
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.bi-animado { animation: spin 2s linear infinite !important; }
+
+.main-container { display: flex; height: 100vh; width: 100vw; }
+.sidebar { width: 400px; padding: 30px; background-color: #fefbf0; border-right: 1px solid #ddd; }
+.chart-pane { flex: 1; padding: 20px; background-color: #f9f9f9; }

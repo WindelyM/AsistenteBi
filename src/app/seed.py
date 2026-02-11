@@ -1,0 +1,133 @@
+"""Script de seed: puebla la base de datos con datos de ejemplo."""
+
+import random
+from datetime import datetime, timedelta
+
+from dotenv import load_dotenv
+from sqlalchemy.orm import Session
+
+from src.app.core.database import SessionLocal, engine, Base
+from src.app import models
+
+load_dotenv()
+
+
+def populate_db():
+    print("Recreating database schema...")
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+
+    db = SessionLocal()
+    try:
+        print("Seeding data...")
+
+        # 1. Categories
+        categories = ["Electrónica", "Muebles", "Oficina", "Hogar"]
+        cat_objs = []
+        for c in categories:
+            cat = models.Categoria(nombre=c)
+            db.add(cat)
+            cat_objs.append(cat)
+        db.commit()
+
+        # 2. Products
+        products_data = [
+            ("Laptop Pro", 1200.00, 50, "Electrónica"),
+            ("Monitor 4K", 450.00, 30, "Electrónica"),
+            ("Mouse Wireless", 25.00, 100, "Electrónica"),
+            ("Teclado Mecánico", 85.00, 60, "Electrónica"),
+            ("Silla Ergonómica", 250.00, 20, "Muebles"),
+            ("Escritorio Elevable", 500.00, 15, "Muebles"),
+            ("Estantería", 120.00, 40, "Muebles"),
+            ("Archivador", 60.00, 50, "Oficina"),
+            ("Pizarrón Blanco", 45.00, 30, "Oficina"),
+            ("Lámpara LED", 35.00, 80, "Hogar")
+        ]
+
+        prod_objs = []
+        for name, price, stock, cat_name in products_data:
+            cat_id = next(c.id_categoria for c in cat_objs if c.nombre == cat_name)
+            prod = models.Producto(nombre=name, precio=price, stock=stock, id_categoria=cat_id)
+            db.add(prod)
+            prod_objs.append(prod)
+        db.commit()
+
+        # 3. User Types & Seller Types
+        t_admin = models.TipoUsuario(nombre="Admin"); db.add(t_admin)
+        t_cliente = models.TipoUsuario(nombre="Cliente"); db.add(t_cliente)
+
+        t_v_interno = models.TipoVendedor(nombre="Interno"); db.add(t_v_interno)
+        t_v_externo = models.TipoVendedor(nombre="Externo"); db.add(t_v_externo)
+        db.commit()
+
+        # 4. Sellers (with Regions)
+        regions = ["Norte", "Sur", "Este", "Oeste"]
+        sellers_names = ["Carlos Ruiz", "Ana Gomez", "Pedro Martinez", "Lucia Fernandez", "Miguel Angel"]
+        seller_objs = []
+        for name in sellers_names:
+            seller = models.Vendedor(
+                nombre=name,
+                region=random.choice(regions),
+                id_tipo_vendedor=t_v_interno.id_tipo_vendedor
+            )
+            db.add(seller)
+            seller_objs.append(seller)
+        db.commit()
+
+        # 5. Users
+        users_names = ["Juan Perez", "Maria Lopez", "Luis Garcia", "Elena Rodriguez", "Sofia Hernandez"]
+        user_objs = []
+        for name in users_names:
+            user = models.Usuario(
+                nombre=name,
+                email=f"{name.lower().replace(' ', '.')}@example.com",
+                id_tipo_usuario=t_cliente.id_tipo_usuario
+            )
+            db.add(user)
+            user_objs.append(user)
+        db.commit()
+
+        # 6. Sales States
+        s_completado = models.EstadoVenta(nombre="Completado"); db.add(s_completado)
+        s_pendiente = models.EstadoVenta(nombre="Pendiente"); db.add(s_pendiente)
+        s_cancelado = models.EstadoVenta(nombre="Cancelado"); db.add(s_cancelado)
+        db.commit()
+
+        # 7. Sales (Historical Data)
+        print("Generating 200 sales records...")
+        start_date = datetime(2023, 1, 1)
+        end_date = datetime.now()
+
+        for _ in range(200):
+            days_diff = (end_date - start_date).days
+            random_days = random.randint(0, days_diff)
+            sale_date = start_date + timedelta(days=random_days)
+
+            product = random.choice(prod_objs)
+            seller = random.choice(seller_objs)
+            user = random.choice(user_objs)
+            qty = random.randint(1, 5)
+
+            sale = models.Venta(
+                id_usuario=user.id_usuario,
+                id_vendedor=seller.id_vendedor,
+                id_producto=product.id_producto,
+                id_estado=s_completado.id_estado,
+                cantidad=qty,
+                total=product.precio * qty,
+                fecha_venta=sale_date
+            )
+            db.add(sale)
+
+        db.commit()
+        print("Database populated successfully!")
+
+    except Exception as e:
+        print(f"Error seeding database: {e}")
+        db.rollback()
+    finally:
+        db.close()
+
+
+if __name__ == "__main__":
+    populate_db()
