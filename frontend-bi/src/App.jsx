@@ -1,233 +1,385 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { GraphicWalker } from '@kanaries/graphic-walker';
+import './App.css';
+import logo from './assets/logo.png';
+
+const CHART_TYPES = [
+  { id: 'bar', label: 'Barras' },
+  { id: 'line', label: 'Líneas' },
+  { id: 'area', label: 'Área' },
+  { id: 'arc', label: 'Pastel' },
+  { id: 'point', label: 'Dispersión' },
+];
+
+const CUSTOM_UI_THEME = {
+  light: {
+    background: '#fffaf4',
+    foreground: '#3b2f1e',
+    primary: '#d39f5a',
+    'primary-foreground': '#000000',
+    muted: '#f0e0c8',
+    'muted-foreground': '#7a6a52',
+    accent: '#f4d4a1',
+    'accent-foreground': '#000000',
+    border: '#d4b68a',
+    ring: '#d39f5a',
+    card: '#fff6ec',
+    'card-foreground': '#3b2f1e',
+    popover: '#fffaf4',
+    'popover-foreground': '#3b2f1e',
+    secondary: '#f0e0c8',
+    'secondary-foreground': '#3b2f1e',
+    input: '#fff1e0',
+    dimension: '#3b2f1e',
+    measure: '#d39f5a',
+  },
+  dark: { 
+    background: '#1e1a15',
+    foreground: '#e8dac6',
+    primary: '#d39f5a',
+    'primary-foreground': '#000000',
+    muted: '#2d261f',
+    'muted-foreground': '#9a8a72',
+    accent: '#352e26',
+    'accent-foreground': '#e8dac6',
+    border: '#4a3f34',
+    ring: '#d39f5a',
+    card: '#241f1a',
+    'card-foreground': '#e8dac6',
+    popover: '#1e1a15',
+    'popover-foreground': '#e8dac6',
+    secondary: '#2d261f',
+    'secondary-foreground': '#e8dac6',
+    input: '#2d261f',
+    dimension: '#e8dac6',
+    measure: '#d39f5a',
+  }
+};
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError(error) { return { hasError: true }; }
+  componentDidCatch(error, errorInfo) { 
+    console.error("GraphicWalker Error Boundary:", error, errorInfo); 
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="viz-empty" style={{ color: '#ef4444', textAlign: 'center', padding: '20px' }}>
+          <h3 style={{ marginBottom: '10px' }}>⚠️ Error de Visualización</h3>
+          <p style={{ fontSize: '0.85rem', color: '#7a6a52', maxWidth: '300px', margin: '0 auto 15px' }}>
+            Hubo un problema al renderizar el gráfico. Los datos están seguros, intenta reintentar o cambiar el tipo de gráfico.
+          </p>
+          <button 
+            onClick={() => {
+              this.setState({ hasError: false });
+              if (this.props.onReset) this.props.onReset();
+            }} 
+            className="suggestion-btn"
+            style={{ margin: '0 auto', display: 'block' }}
+          >
+            Reintentar Visualización
+          </button>
+        </div>
+      );
+    }
+    return this.props.children; 
+  }
+}
+
 
 const App = () => {
   const [messages, setMessages] = useState([]);
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
-  // Estado para el panel derecho (GraphicWalker)
-  const [gwData, setGwData] = useState([]);
-  const [gwFields, setGwFields] = useState([]);
-  const [gwChart, setGwChart] = useState(undefined);
+  const [theme, setTheme] = useState('light');
+  const [vizState, setVizState] = useState({
+    data: [],
+    fields: [],
+    chart: null,
+    type: 'bar',
+    key: 0
+  });
   const chatEndRef = useRef(null);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Genera campos dinámicos a partir de los datos reales del backend
-  const generateFields = (data) => {
-    if (!data || data.length === 0) return [];
+  const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
+
+  const generateFields = useCallback((data) => {
+    if (!data || !Array.isArray(data) || data.length === 0) return [];
     const sample = data[0];
     return Object.keys(sample).map(key => {
       const value = sample[key];
       let semanticType = 'nominal';
       let analyticType = 'dimension';
+      let dataType = 'string';
 
       if (typeof value === 'number') {
         semanticType = 'quantitative';
         analyticType = 'measure';
-      } else if (typeof value === 'string' && !isNaN(Date.parse(value)) && value.includes('-')) {
+        dataType = 'number';
+      } else if (typeof value === 'string' && value.includes('-') && !isNaN(Date.parse(value))) {
         semanticType = 'temporal';
-        analyticType = 'dimension';
+        dataType = 'datetime';
       }
 
-      return {
-        fid: key,
+      const f = {
+        fid: String(key),
         name: key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' '),
         semanticType,
         analyticType,
+        dataType, 
+        basename: String(key),
+      };
+      // Invariant redundante para GraphicWalker 0.4.80
+      return {
+        ...f,
+        key: f.fid,
+        id: f.fid,
+        dragId: f.fid
       };
     });
-  };
+  }, []);
+
+  const generateChartSpec = useCallback((fields, type) => {
+    if (!fields || !Array.isArray(fields) || fields.length === 0) return null;
+    
+    const dimensions = fields.filter(f => f.analyticType === 'dimension');
+    const measures = fields.filter(f => f.analyticType === 'measure');
+    
+    if (measures.length === 0) return null;
+
+    const dimField = dimensions.length > 0 ? dimensions[0] : null;
+    const measField = measures[0];
+
+    const mapField = (f, extra = {}) => ({
+      fid: f.fid,
+      name: f.name || f.fid,
+      analyticType: f.analyticType || 'dimension',
+      semanticType: f.semanticType || 'nominal',
+      dataType: f.dataType || 'string',
+      basename: f.fid,
+      dragId: f.fid,
+      ...extra
+    });
+
+    // Encodings exhaustivos para evitar el error de length en visSpecHistory.ts
+    const encodings = {
+      dimensions: dimensions.map(d => mapField(d)),
+      measures: measures.map(m => mapField(m)),
+      rows: [ mapField(measField, { aggName: 'sum' }) ],
+      columns: dimField ? [ mapField(dimField) ] : [],
+      color: dimField && type !== 'line' && type !== 'area' ? [ mapField(dimField) ] : [],
+      opacity: [], 
+      size: [], 
+      shape: [], 
+      theta: [], 
+      radius: [], 
+      details: [], 
+      filters: [], 
+      text: [],
+      longitude: [],
+      latitude: [],
+      geoId: [],
+      facetX: [],
+      facetY: [],
+      facetRows: [],
+      facetColumns: []
+    };
+
+    if (type === 'arc') {
+      encodings.columns = [];
+      encodings.rows = [];
+      encodings.theta = [ mapField(measField, { aggName: 'sum' }) ];
+      if (dimField) {
+        encodings.color = [ mapField(dimField) ];
+      }
+    }
+    
+    return [{
+      visId: 'auto-chart-main',
+      name: 'Análisis IA',
+      encodings,
+      config: { 
+        defaultAggregated: true, 
+        geoms: [type === 'arc' ? 'arc' : type], 
+      },
+      layout: { 
+        showTableSummary: false, 
+        size: { mode: 'full', width: 800, height: 600 } 
+      },
+    }];
+  }, []);
+
+  const handleChartTypeChange = useCallback((type) => {
+    if (vizState.fields.length > 0) {
+      const newChart = generateChartSpec(vizState.fields, type);
+      setVizState(prev => ({
+        ...prev,
+        type,
+        chart: newChart,
+        key: prev.key + 1
+      }));
+    }
+  }, [vizState.fields, generateChartSpec]);
 
   const handleAskBackend = useCallback(async () => {
-    if (!prompt.trim()) return;
+    if (!prompt.trim() || loading) return;
     const userMsg = prompt.trim();
     setPrompt("");
     setLoading(true);
-
-    // Agregar mensaje del usuario al chat
+    setVizState({ data: [], fields: [], chart: null, type: 'bar', key: Date.now() });
     setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/ask', {
+      const resp = await fetch('http://127.0.0.1:8000/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: userMsg })
       });
 
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.detail || response.statusText);
+      if (!resp.ok) {
+        const errData = await resp.json().catch(() => ({}));
+        throw new Error(errData.detail || resp.statusText);
       }
+      
+      const result = await resp.json();
 
-      const data = await response.json();
-      console.log("Backend Response:", data);
-
-      if (data.status === 'success' && data.data && data.data.length > 0) {
-        const fields = generateFields(data.data);
-        console.log("Dynamic Fields:", fields);
-
-        // Crear configuración de gráfico automático
-        const dims = fields.filter(f => f.analyticType === 'dimension');
-        const meas = fields.filter(f => f.analyticType === 'measure');
-        const dim = dims[0];
-        const measure = meas[0];
-
-        if (dim && measure) {
-          const autoChart = [{
-            visId: 'auto_' + Date.now(),
-            name: userMsg,
-            encodings: {
-              dimensions: dims.map(d => ({ fid: d.fid, name: d.name, semanticType: d.semanticType, analyticType: 'dimension' })),
-              measures: meas.map(m => ({ fid: m.fid, name: m.name, semanticType: m.semanticType, analyticType: 'measure', aggName: 'sum' })),
-              rows: [{ fid: measure.fid, name: measure.name, semanticType: measure.semanticType, analyticType: 'measure', aggName: 'sum' }],
-              columns: [{ fid: dim.fid, name: dim.name, semanticType: dim.semanticType, analyticType: 'dimension' }],
-              color: [],
-              opacity: [],
-              size: [],
-              shape: [],
-              theta: [],
-              radius: [],
-              longitude: [],
-              latitude: [],
-              geoId: [],
-              details: [],
-              filters: [],
-              text: [],
-            },
-            config: {
-              defaultAggregated: true,
-              geoms: [data.metadata.suggested_chart === 'line' ? 'line' : data.metadata.suggested_chart === 'pie' ? 'arc' : 'bar'],
-              coordSystem: 'generic',
-              limit: -1,
-            },
-            layout: {
-              showActions: false,
-              showTableSummary: false,
-              interactiveScale: false,
-              stack: 'stack',
-              size: { mode: 'auto' },
-            },
-          }];
-          setGwChart(autoChart);
-          console.log("Auto Chart Config:", autoChart);
+      if (result.status === 'success') {
+        const dataArr = Array.isArray(result.data) ? result.data : [];
+        const fieldsData = generateFields(dataArr);
+        
+        if (dataArr.length > 0 && fieldsData.length > 0) {
+          const sType = result.metadata?.suggested_chart || 'bar';
+          const spec = generateChartSpec(fieldsData, sType);
+          setVizState(prev => ({
+            data: dataArr,
+            fields: fieldsData,
+            chart: spec,
+            type: sType,
+            key: prev.key + 1
+          }));
         }
 
-        // Actualizar el panel derecho con los nuevos datos
-        setGwData(data.data);
-        setGwFields(fields);
-
-        // Agregar confirmación al chat
         setMessages(prev => [...prev, {
           role: 'assistant',
-          text: `✅ Consulta ejecutada. Se encontraron ${data.data.length} resultados con los campos: ${fields.map(f => f.name).join(', ')}. Los datos están cargados en el panel de visualización. Puedes cambiar el tipo de gráfico, arrastrar campos y aplicar filtros.`
-        }]);
-      } else if (data.data && data.data.length > 0 && data.data[0].error) {
-        setMessages(prev => [...prev, {
-          role: 'assistant',
-          text: `❌ Error en la consulta SQL: ${data.data[0].error}`
+          text: result.answer || (result.data?.length > 0 ? `Se encontraron ${result.data.length} resultados.` : 'Sin resultados.')
         }]);
       } else {
+        // Manejo de errores devueltos por la API (status: 'error')
         setMessages(prev => [...prev, {
           role: 'assistant',
-          text: '⚠️ No se encontraron datos para tu consulta. Intenta con otra pregunta.'
+          text: result.answer || 'Lo siento, el servidor devolvió un error desconocido.'
         }]);
       }
-
-    } catch (e) {
-      console.error("Error:", e);
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        text: `❌ Error: ${e.message}`
+    } catch (err) {
+      console.error("Fetch Error:", err);
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        text: `Lo siento, ha ocurrido un problema: ${err.message}.` 
       }]);
     } finally {
       setLoading(false);
     }
-  }, [prompt]);
+  }, [prompt, loading, generateFields, generateChartSpec]);
 
   return (
-    <div style={{ display: 'flex', height: '100vh', width: '100vw', fontFamily: "'Segoe UI', 'Inter', sans-serif", backgroundColor: '#0d1117', color: '#e6edf3' }}>
-      
-      {/* ===== PANEL IZQUIERDO: CHAT ===== */}
-      <div style={{ 
-        width: '360px', minWidth: '360px', 
-        display: 'flex', flexDirection: 'column',
-        borderRight: '1px solid #21262d', backgroundColor: '#161b22'
-      }}>
-        {/* Chat Header */}
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid #21262d', display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ fontSize: '1.4rem' }}>🤖</span>
-          <div>
-            <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>Asistente BI</h2>
-            <small style={{ color: '#8b949e', fontSize: '0.75rem' }}>Gemini AI · PostgreSQL</small>
+    <div className={`app-container ${theme === 'dark' ? 'dark-theme' : ''}`}>
+
+      {/* Panel izquierdo: Chat */}
+      <div className="chat-panel">
+
+        {/* Header */}
+        <div className="chat-header">
+          <img src={logo} alt="Logo" className={`header-logo${loading ? ' spinning' : ''}`} />
+          <div className="chat-header-text">
+            <h2>Asistente BI</h2>
+            <small>Gemini AI · PostgreSQL</small>
+          </div>
+          <div className={`theme-switcher-grid ${theme === 'dark' ? 'night-theme' : ''}`} onClick={toggleTheme}>
+            <div className="sun"></div>
+            <div className="moon-overlay"></div>
+            <div className="cloud-ball" id="ball1"></div>
+            <div className="cloud-ball" id="ball2"></div>
+            <div className="cloud-ball" id="ball3"></div>
+            <div className="cloud-ball" id="ball4"></div>
+            <div className="star" id="star1"></div>
+            <div className="star" id="star2"></div>
+            <div className="star" id="star3"></div>
+            <div className="star" id="star4"></div>
           </div>
         </div>
 
-        {/* Chat Messages */}
-        <div style={{ flex: 1, overflow: 'auto', padding: '16px' }}>
+        {/* Messages */}
+        <div className="chat-messages">
           {messages.length === 0 && (
-            <div style={{ textAlign: 'center', color: '#8b949e', marginTop: '40px' }}>
-              <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>💬</div>
-              <p style={{ fontSize: '0.85rem', lineHeight: 1.6 }}>
-                Escribe una pregunta para consultar tu base de datos.
+            <div style={{ textAlign: 'left', color: '#7a6a52', marginTop: '20px', marginBottom: '20px' }}>
+              <p style={{ fontSize: '0.85rem', fontWeight: 400, lineHeight: 1.6 }}>
+                Escribe una pregunta para consultar tu base de datos. <br /> Consultas sugeridas:
               </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '16px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginTop: '40px' }}>
                 {[
                   'Rendimiento de los vendedores',
                   'Ventas por categoría',
                   'Ventas por región'
                 ].map(q => (
-                  <button key={q} onClick={() => setPrompt(q)} style={{
-                    padding: '8px 14px', backgroundColor: '#21262d', border: '1px solid #30363d',
-                    borderRadius: '8px', color: '#8b949e', cursor: 'pointer', fontSize: '0.82rem',
-                    textAlign: 'left', transition: 'all 0.2s'
-                  }}>💡 {q}</button>
+                  <button key={q} onClick={() => setPrompt(q)} className="suggestion-btn">
+                    {q}
+                  </button>
                 ))}
               </div>
             </div>
           )}
-
+          
           {messages.map((msg, i) => (
             <div key={i} style={{
               marginBottom: '12px',
               display: 'flex', flexDirection: 'column',
               alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start'
             }}>
-              <div style={{
-                maxWidth: '90%', padding: '10px 14px', borderRadius: '12px',
-                backgroundColor: msg.role === 'user' ? '#238636' : '#21262d',
-                fontSize: '0.88rem', lineHeight: 1.5
-              }}>
+              <div
+                className={msg.role === 'user' ? 'msg-bubble-user' : 'msg-bubble-assistant'}
+                style={{
+                  maxWidth: '90%', padding: '10px 14px', borderRadius: '12px',
+                  fontSize: '0.88rem', lineHeight: 1.5
+                }}
+              >
                 {msg.text}
               </div>
-              <small style={{ color: '#484f58', marginTop: '3px', fontSize: '0.7rem' }}>
+              <small style={{ color: '#9a8a72', marginTop: '3px', fontSize: '0.7rem' }}>
                 {msg.role === 'user' ? 'Tú' : 'IA'}
               </small>
             </div>
           ))}
 
           {loading && (
-            <div style={{ color: '#8b949e', fontSize: '0.85rem', padding: '8px' }}>
+            <div style={{ color: '#7a6a52', fontSize: '0.85rem', padding: '8px' }}>
               <span style={{ animation: 'pulse 1.5s infinite' }}>⏳</span> Analizando...
             </div>
           )}
           <div ref={chatEndRef} />
         </div>
 
-        {/* Chat Input */}
-        <div style={{ padding: '12px 16px', borderTop: '1px solid #21262d' }}>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <input
-              type="text"
+        {/* Input */}
+        <div className="chat-input-area">
+          <div className="chat-input-row">
+            <textarea
+              id="chat-prompt"
+              name="chat-prompt"
               value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Escribe tu consulta..."
-              style={{
-                flex: 1, padding: '10px 14px', borderRadius: '8px', border: '1px solid #30363d',
-                backgroundColor: '#0d1117', color: '#e6edf3', fontSize: '0.9rem', outline: 'none'
+              onChange={(e) => {
+                setPrompt(e.target.value);
+                e.target.style.height = 'auto';
+                e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
               }}
+              placeholder="Escribe tu consulta..."
+              className="chat-input"
+              rows={1}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
@@ -238,11 +390,8 @@ const App = () => {
             <button
               onClick={handleAskBackend}
               disabled={loading || !prompt.trim()}
-              style={{
-                padding: '10px 16px', borderRadius: '8px', border: 'none',
-                backgroundColor: loading || !prompt.trim() ? '#21262d' : '#238636',
-                color: 'white', fontWeight: 600, cursor: loading ? 'wait' : 'pointer', fontSize: '0.9rem'
-              }}
+              className={`chat-send-btn ${loading || !prompt.trim() ? 'disabled' : 'active'}`}
+              style={{ alignSelf: 'center' }}
             >
               {loading ? '⏳' : '➤'}
             </button>
@@ -250,40 +399,51 @@ const App = () => {
         </div>
       </div>
 
-      {/* ===== PANEL DERECHO: GRAPHIC WALKER ===== */}
-      <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-        {gwData.length > 0 ? (
-          <div style={{ flex: 1, overflow: 'auto' }}>
-            <GraphicWalker
-              key={JSON.stringify(gwFields.map(f => f.fid))}
-              dataSource={gwData}
-              rawFields={gwFields}
-              chart={gwChart}
-              appearance="dark"
-              i18nLang="es-ES"
-            />
-          </div>
+      {/* Panel derecho: Visualización */}
+      <div className="viz-panel">
+        {vizState.data && vizState.data.length > 0 ? (
+          <>
+            <div className="chart-type-bar">
+              {CHART_TYPES.map(ct => (
+                <button
+                  key={ct.id}
+                  className={`chart-type-btn ${vizState.type === ct.id ? 'active' : ''}`}
+                  onClick={() => handleChartTypeChange(ct.id)}
+                  title={ct.label}
+                >
+                  <span className="chart-type-label">{ct.label}</span>
+                </button>
+              ))}
+            </div>
+            <div className="viz-content">
+                <ErrorBoundary 
+                  key={vizState.key}
+                  onReset={() => setVizState(prev => ({ ...prev, key: Date.now() }))}
+                >
+                  <GraphicWalker
+                    key={vizState.key}
+                    data={vizState.data || []}
+                    fields={vizState.fields}
+                    chart={Array.isArray(vizState.chart) ? vizState.chart : undefined} 
+                    dark={theme === 'dark' ? 'dark' : 'light'}
+                    colorConfig={CUSTOM_UI_THEME}
+                    i18nLang="es-ES"
+                  />
+                </ErrorBoundary>
+            </div>
+          </>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100%', color: '#484f58' }}>
-            <div style={{ fontSize: '4rem', marginBottom: '16px' }}>📊</div>
-            <h3 style={{ fontWeight: 500, color: '#8b949e' }}>Panel de Visualización Interactiva</h3>
-            <p style={{ maxWidth: '400px', textAlign: 'center', lineHeight: 1.6, fontSize: '0.9rem' }}>
-              Haz una pregunta en el chat para cargar datos aquí. Podrás cambiar tipos de gráfico, arrastrar campos y aplicar filtros — estilo Grafana/Tableau.
+          <div className="viz-empty">
+            <div className="viz-empty-icon">
+              <img src={logo} alt="Logo" />
+            </div>
+            <h3>Centro de Visualización</h3>
+            <p>
+              Realiza una consulta para generar visualizaciones interactivas de tus datos.
             </p>
           </div>
         )}
       </div>
-
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.4; }
-        }
-        input::placeholder { color: #484f58; }
-        *::-webkit-scrollbar { width: 6px; }
-        *::-webkit-scrollbar-track { background: transparent; }
-        *::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
-      `}</style>
     </div>
   );
 };

@@ -6,8 +6,8 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from sqlalchemy.orm import Session
 
-from src.app.core.database import SessionLocal, engine, Base
-from src.app import models
+from app.core.database import SessionLocal, engine, Base
+from app import models
 
 load_dotenv()
 
@@ -94,11 +94,11 @@ def populate_db():
         db.commit()
 
         # 7. Sales (Historical Data)
-        print("Generating 200 sales records...")
+        print("Generating 10,000 sales records...")
         start_date = datetime(2023, 1, 1)
         end_date = datetime.now()
 
-        for _ in range(200):
+        for _ in range(10000):
             days_diff = (end_date - start_date).days
             random_days = random.randint(0, days_diff)
             sale_date = start_date + timedelta(days=random_days)

@@ -1,29 +1,28 @@
-"""Endpoint /ask — lógica de IA para traducir preguntas a SQL."""
-
+#Endpoint /ask — lógica de IA para traducir preguntas a SQL.
 import os
 import re
 import traceback
 from typing import Any, List
-
+#Importamos pandas para procesar datos
 import pandas as pd
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-
+#Importamos langchain para procesar datos
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_community.utilities import SQLDatabase
 from langchain_core.tools import tool
 import google.generativeai as genai
-
-from src.app.core.database import engine
-
+#Importamos la base de datos
+from app.core.database import engine
+#Importamos el router de fastapi
 router = APIRouter(tags=["ask"])
 
-# ── Variables globales lazy ─────────────────────────────────────────
+# Variables globales
 
 db_langchain = None
 llm = None
 
-
+# Base de datos
 def get_db_langchain():
     global db_langchain
     if db_langchain is None:
@@ -40,26 +39,27 @@ def get_db_langchain():
     return db_langchain
 
 
+# Modelo de IA
 def get_llm():
     global llm
     if llm is None:
         print("DEBUG: Inicializando LLM...", flush=True)
         try:
             genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
+            # Usamos gemini-flash-latest para intentar encontrar cuota disponible
             llm = ChatGoogleGenerativeAI(
                 model="gemini-flash-latest",
                 temperature=0,
-                transport="rest",
                 max_retries=1
             )
-            print("DEBUG: LLM initialized.", flush=True)
+            print(f"DEBUG: LLM inicializado con modelo: {llm.model}", flush=True)
         except Exception as e:
             print(f"ERROR initializing LLM: {e}", flush=True)
             raise e
     return llm
 
 
-# ── Prompt del sistema ──────────────────────────────────────────────
+# Prompt del sistema 
 
 custom_system_message = """
       Actúa como un Motor de Consulta de Datos para un sistema de BI.
@@ -77,21 +77,43 @@ custom_system_message = """
       - ventas: id_venta (PK), id_usuario (FK), id_vendedor (FK), id_producto (FK), id_estado (FK), total (numeric), cantidad (int), fecha_venta (datetime)
       
       REGLAS ESTRICTAS PARA GENERAR SQL:
-      1. SIEMPRE genera consultas que devuelvan AL MENOS 2 columnas: una columna de etiqueta/categoría y una columna numérica.
+      1. SIEMPRE genera consultas que devuelvan AL MENOS 2 columnas: una columna de etiqueta/categoría (dimensión) y una columna numérica (métrica).
       2. NUNCA devuelvas solo un número. Agrupa por alguna dimensión relevante.
-      3. SIEMPRE usa JOINs para obtener nombres legibles. La tabla ventas solo tiene IDs (id_vendedor, id_producto, etc.).
-      4. IMPORTANTE: La columna se llama 'nombre' en TODAS las tablas, NO 'nombre_categoria' ni 'nombre_producto'.
-      5. Siempre dale alias legibles a los resultados (ej: AS categoria, AS total_ventas).
-      6. Limita resultados a 100 filas máximo con LIMIT 100.
+      3. SIEMPRE usa JOINs para obtener nombres legibles (tabla ventas solo tiene IDs).
+      4. IMPORTANTE: La columna se llama 'nombre' en TODAS las tablas, NO 'nombre_categoria'.
+      5. Siempre dale alias legibles a los resultados (ej: AS vendedor, AS total_ventas).
+      6. PARA PREGUNTAS SOBRE "EL MEJOR", "EL MÁXIMO" O "EL QUE MÁS", SIEMPRE devuelve un TOP 10 (LIMIT 10) para que el gráfico sea comparativo y útil, a menos que el usuario pida explícitamente solo uno.
+      7. Limita resultados generales a 100 filas máximo con LIMIT 100.
       
       EJEMPLOS DE CONSULTAS CORRECTAS:
-      - Rendimiento de vendedores: SELECT vd.nombre AS vendedor, vd.region AS sector, SUM(vt.total) AS total_ventas, COUNT(vt.id_venta) AS num_ventas FROM ventas vt JOIN vendedores vd ON vt.id_vendedor = vd.id_vendedor GROUP BY vd.nombre, vd.region ORDER BY total_ventas DESC LIMIT 100;
+      - Quien es el mejor vendedor: SELECT vd.nombre AS vendedor, SUM(vt.total) AS total_ventas FROM ventas vt JOIN vendedores vd ON vt.id_vendedor = vd.id_vendedor GROUP BY vd.nombre ORDER BY total_ventas DESC LIMIT 10;
       - Ventas por categoría: SELECT c.nombre AS categoria, SUM(vt.total) AS total_ventas FROM ventas vt JOIN productos p ON vt.id_producto = p.id_producto JOIN categorias c ON p.id_categoria = c.id_categoria GROUP BY c.nombre ORDER BY total_ventas DESC LIMIT 100;
       - Ventas por región: SELECT vd.region AS region, SUM(vt.total) AS total_ventas FROM ventas vt JOIN vendedores vd ON vt.id_vendedor = vd.id_vendedor GROUP BY vd.region ORDER BY total_ventas DESC LIMIT 100;
+
+      SEGURIDAD Y CONTROL:
+      - Si el mensaje del usuario consiste en letras al azar, no tiene sentido, es ofensivo o no está relacionado de ninguna manera con los datos de la base de datos (ventas, productos, categorías, usuarios, vendedores), responde ÚNICAMENTE con la palabra: CONSULTA_NO_VALIDA
 """
 
 
-# ── Tool LangChain ──────────────────────────────────────────────────
+
+# LangChain Tools
+@tool
+def query_manual(question: str) -> str:
+    """Consulta el manual del usuario o documentos de políticas cuando la pregunta no es sobre datos numéricos o ventas."""
+    try:
+        print(f"DEBUG: Ejecutando RAG (Manual): {question}", flush=True)
+        if os.path.exists("manual_usuario.md"):
+            with open("manual_usuario.md", "r") as f:
+                content = f.read()
+            from langchain_core.prompts import ChatPromptTemplate
+            prompt_tpl = ChatPromptTemplate.from_template("Responde a la pregunta: {question} basándote únicamente en este contenido: {content}")
+            chain = prompt_tpl | get_llm()
+            
+            res = chain.invoke({"question": question, "content": content})
+            return res.content
+        return "No se encontró el manual del usuario."
+    except Exception as e:
+        return f"Error consultando el manual: {e}"
 
 @tool
 def query_database(query: str) -> str:
@@ -103,53 +125,83 @@ def query_database(query: str) -> str:
         return f"Error ejecutando SQL: {e}"
 
 
-# ── Helpers ─────────────────────────────────────────────────────────
+#Procesar datos con pandas para eliminar nulos, formatear fechas, etc
 
 def process_data_with_pandas(raw_data: Any) -> List[dict]:
     try:
         df = pd.DataFrame(raw_data) if isinstance(raw_data, list) else pd.DataFrame([raw_data])
         if df.empty:
             return []
+        
+        # 1. Rellenar nulos
         df = df.fillna("")
+
+        # 2. Convertir object/Decimal a float si es necesario
+        # Iteramos columnas object para ver si contienen Decimals
+        import decimal
+        for col in df.select_dtypes(include=['object']).columns:
+            try:
+                # Si la columna tiene algún decimal.Decimal, intentamos convertir toda la columna a float
+                if df[col].apply(lambda x: isinstance(x, decimal.Decimal)).any():
+                    df[col] = df[col].astype(float)
+            except Exception:
+                pass # Si falla, se queda como estaba (probablemente string)
+
+        # 3. Formatear fechas a string ISO
         for col in df.select_dtypes(include=['datetime64[ns]', 'datetimetz']).columns:
             df[col] = df[col].dt.strftime("%Y-%m-%d %H:%M:%S")
+
         return df.to_dict(orient="records")
     except Exception:
         return [{"resultado": str(raw_data)}]
 
 
-# ── Modelo de petición ──────────────────────────────────────────────
+# Modelo de petición 
 
 class AskRequest(BaseModel):
     prompt: str
 
 
-# ── Endpoint /ask ───────────────────────────────────────────────────
+# Endpoint /ask 
 
 @router.post("/ask")
 async def ask_ai(request: AskRequest):
     try:
-        print(f"DEBUG: Procesando solicitud: {request.prompt}", flush=True)
-
-        try:
-            my_llm = get_llm()
-            my_db = get_db_langchain()
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Error de inicialización: {str(e)}")
-
-        # 1. Preparar el LLM con herramientas
-        print("DEBUG: Binding tools...", flush=True)
-        llm_with_tools = my_llm.bind_tools([query_database])
-
-        # 2. Prompt del sistema
-        system_message = f"""Actúa como un experto en SQL.
-        Tienes acceso a las siguientes tablas: {my_db.get_usable_table_names()}.
-        Tu objetivo es generar una consulta SQL POSTGRESQL válida para responder a la pregunta del usuario.
+        print(f"DEBUG: Procesando solicitud (Single-Pass): {request.prompt}", flush=True)
         
-        Reglas:
-        1. SOLO genera SQL.
-        2. Usa la herramienta 'query_database' para ejecutar la consulta.
-        3. {custom_system_message}
+        my_llm = get_llm()
+        my_db = get_db_langchain()
+        
+        # Cargar el manual una sola vez para meterlo en el prompt (ahorra 1 request por consulta)
+        manual_content = "No disponible."
+        if os.path.exists("manual_usuario.md"):
+            with open("manual_usuario.md", "r") as f:
+                manual_content = f.read()
+
+        system_message = f"""Eres un Asistente de BI Inteligente experto en ventas y políticas de empresa.
+        
+        REGLAS DE ORO:
+        1. Si la pregunta requiere datos, genera una única consulta SQL válida para PostgreSQL.
+        2. Si la pregunta es sobre políticas o el manual, usa la información de abajo.
+        3. Devuelve SIEMPRE una respuesta textual amigable.
+        
+        INFORMACIÓN DEL MANUAL DE USUARIO:
+        {manual_content}
+        
+        ESQUEMA DE BASE DE DATOS:
+        Tablas: {my_db.get_usable_table_names()}
+        {custom_system_message}
+        
+        FORMATO DE SALIDA ESTRICTO:
+        1. PRIMERO: Tu respuesta textual amigable y detallada (basada en el manual si aplica).
+        2. SEGUNDO: Si la pregunta implica datos numéricos (ventas, rendimiento, cantidades, etc.), DEBES incluir ABSOLUTAMENTE un bloque de código SQL válido al final de tu respuesta.
+        
+        Estructura obligatoria:
+        [Tu respuesta en texto aquí...]
+        
+        ```sql
+        SELECT ...
+        ```
         """
 
         messages = [
@@ -157,89 +209,71 @@ async def ask_ai(request: AskRequest):
             ("user", request.prompt)
         ]
 
-        print("DEBUG: Invocando LLM con prompt...", flush=True)
-        try:
-            response = llm_with_tools.invoke(messages)
-        except Exception as e:
-            print(f"ERROR LLM INVOKE: {e}", flush=True)
-            if "429" in str(e) or "quota" in str(e).lower():
-                raise HTTPException(status_code=429, detail="Cuota de IA excedida. Por favor intenta más tarde.")
-            raise e
-
-        print(f"DEBUG: Respuesta LLM: {response}", flush=True)
-
-        data = []
-        raw_output = str(response.content)
-
-        # 3. Procesar llamadas a herramientas
-        if response.tool_calls:
-            for tool_call in response.tool_calls:
-                if tool_call["name"] == "query_database":
-                    sql_query = tool_call["args"]["query"]
-                    print(f"DEBUG: Ejecutando SQL (Tool): {sql_query}", flush=True)
-                    try:
-                        df = pd.read_sql(sql_query, engine)
-                        data = process_data_with_pandas(df.to_dict(orient='records'))
-                        raw_output += f"\nResultados: {len(data)} registros encontrados."
-                    except Exception as sql_err:
-                        print(f"ERROR SQL: {sql_err}", flush=True)
-                        # RETRY: Feed error back to AI to fix the query
-                        print("DEBUG: Retrying with error feedback...", flush=True)
-                        retry_messages = messages + [
-                            ("assistant", str(response.content)),
-                            ("user", f"La consulta SQL falló con este error: {sql_err}\nPor favor corrige la consulta SQL y vuelve a intentar.")
-                        ]
-                        try:
-                            retry_response = llm_with_tools.invoke(retry_messages)
-                            if retry_response.tool_calls:
-                                for rc in retry_response.tool_calls:
-                                    if rc["name"] == "query_database":
-                                        retry_sql = rc["args"]["query"]
-                                        print(f"DEBUG: Retry SQL: {retry_sql}", flush=True)
-                                        df = pd.read_sql(retry_sql, engine)
-                                        data = process_data_with_pandas(df.to_dict(orient='records'))
-                                        raw_output += f"\nResultados (retry): {len(data)} registros encontrados."
-                        except Exception as retry_err:
-                            print(f"ERROR RETRY: {retry_err}", flush=True)
-                            data = [{"error": str(sql_err)}]
-                            raw_output += f"\nError SQL: {sql_err}"
-        else:
-            print("DEBUG: No se generó ninguna consulta SQL (o el modelo contestó directo).", flush=True)
-            if "```sql" in response.content:
+        print("DEBUG: Invocando LLM (Llamada única)...", flush=True)
+        response = my_llm.invoke(messages)
+        
+        # Función de limpieza robusta para Gemini
+        def clean_all(text):
+            if not text: return ""
+            t = str(text).strip()
+            if "signature" in t or "extras" in t or t.startswith("[{"):
                 try:
-                    match = re.search(r"```sql\n(.*?)\n```", response.content, re.DOTALL)
-                    if match:
-                        sql = match.group(1)
-                        print(f"DEBUG: SQL extraído manualmente: {sql}", flush=True)
-                        df = pd.read_sql(sql, engine)
-                        data = process_data_with_pandas(df.to_dict(orient='records'))
-                except Exception as ex:
-                    print(f"Fallback parsing failed: {ex}", flush=True)
+                    import ast
+                    p = ast.literal_eval(t)
+                    if isinstance(p, list) and len(p) > 0: return clean_all(p[0].get("text", str(p[0])))
+                    if isinstance(p, dict): return clean_all(p.get("text", str(p)))
+                except:
+                    import re
+                    m = re.search(r"['\"]text['\"]:\s*['\"](.*?)['\"](?:,\s*['\"]extras['\"])?", t, re.DOTALL)
+                    if m: return m.group(1).replace("\\n", "\n").replace("\\'", "'")
+            return t
 
-        # 4. Generar sugerencia de gráfico
-        p = request.prompt.lower()
-        suggestion = "table"
+        res_text = clean_all(response.content)
+        data = []
+        
+        # 1. Extraer SQL con regex más flexible (con o sin etiqueta 'sql')
+        import re
+        sql_match = re.search(r"```(?:sql)?\s*(SELECT.*?)```", res_text, re.DOTALL | re.IGNORECASE)
+        if sql_match:
+            sql_query = sql_match.group(1).strip()
+            # Limpiar el texto para que el usuario no vea el código SQL crudo (opcional)
+            res_text = res_text.replace(sql_match.group(0), "").strip()
+            
+            print(f"DEBUG: Ejecutando SQL extraído: {sql_query}", flush=True)
+            try:
+                df = pd.read_sql(sql_query, engine)
+                data = process_data_with_pandas(df.to_dict(orient='records'))
+            except Exception as e:
+                print(f"ERROR SQL: {e}", flush=True)
+                data = [{"error": str(e)}]
 
-        if "[CHART:bar]" in raw_output or any(w in p for w in ["comparar", "cuantos", "total", "categoría", "categoria", "por", "region", "producto", "vendedor", "estado"]):
-            suggestion = "bar"
-        elif "[CHART:pie]" in raw_output or any(w in p for w in ["porcentaje", "distribucion", "proporcion"]):
-            suggestion = "pie"
-        elif "[CHART:line]" in raw_output or any(w in p for w in ["tiempo", "evolucion", "fecha", "tendencia", "mensual", "diario"]):
-            suggestion = "line"
-
-        # Fallback inteligente
-        if suggestion == "table" and len(data) > 1:
-            has_number = any(isinstance(v, (int, float)) for v in data[0].values())
-            has_text = any(isinstance(v, str) for v in data[0].values())
-            if has_number and has_text:
+        # 2. Generar sugerencia de gráfico más inteligente
+        suggestion = "bar"
+        if data:
+            keys = [k.lower() for k in data[0].keys()]
+            p = request.prompt.lower()
+            
+            # Prioridad 1: Detección por prompt
+            if any(w in p for w in ["porcentaje", "distribucion", "proporcion", "circular", "pastel", "pie"]):
+                suggestion = "arc"
+            elif any(w in p for w in ["relación", "frente a", "vs", "dispersión"]):
+                suggestion = "point"
+            # Prioridad 2: Detección por datos
+            elif any(any(w in k for w in ["fecha", "tiempo", "mes", "año", "date", "time"]) for k in keys):
+                suggestion = "line"
+            elif len(data) > 10:
                 suggestion = "bar"
 
+        # 3. Respuesta final
+        if not res_text and data:
+            res_text = f"He encontrado {len(data)} registros para tu consulta."
+        elif not res_text:
+            res_text = "No he podido encontrar una respuesta clara. ¿Me das más detalles?"
+
         return {
-            "metadata": {
-                "question": request.prompt,
-                "suggested_chart": suggestion,
-            },
+            "metadata": {"question": request.prompt, "suggested_chart": suggestion},
             "data": data,
+            "answer": res_text,
             "status": "success"
         }
 
@@ -248,4 +282,9 @@ async def ask_ai(request: AskRequest):
     except Exception as e:
         print(f"ERROR CRÍTICO EN /ASK: {e}", flush=True)
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+        return {
+            "metadata": {"question": request.prompt, "suggested_chart": "bar"},
+            "data": [],
+            "answer": f"Lo siento, ocurrió un error procesando tu solicitud: {str(e)}",
+            "status": "error"
+        }

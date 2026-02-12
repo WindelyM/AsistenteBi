@@ -1,13 +1,618 @@
-.logo-bi {
-  height: 60px !important; /* Arregla el tamaño enorme */
-  width: auto !important;
-  display: block;
-  margin: 0 auto 20px auto;
+/* -----------------------------------------
+   1. ESTILOS GENERALES Y TEMA CLARO (Default)
+   ----------------------------------------- */
+
+/* Layout principal */
+.app-container {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  font-family: 'Segoe UI', 'Inter', sans-serif;
+  background-color: #fff7ef;
+  color: #3b2f1e;
+  overflow: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-.bi-animado { animation: spin 2s linear infinite !important; }
+/* Panel izquierdo: Chat */
+.chat-panel {
+  width: 360px;
+  min-width: 360px;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #d4b68a;
+  background-color: #fff6ec;
+  height: 100%;
+}
 
-.main-container { display: flex; height: 100vh; width: 100vw; }
-.sidebar { width: 400px; padding: 30px; background-color: #fefbf0; border-right: 1px solid #ddd; }
-.chart-pane { flex: 1; padding: 20px; background-color: #f9f9f9; }
+/* Panel derecho: Visualización */
+.viz-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background-color: #fff7ef;
+  height: 100%;
+  border-left: 1px solid #d4b68a;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* Encabezado del chat */
+.chat-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #d4b68a;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+/* Texto del encabezado */
+.chat-header-text {
+  flex: 1;
+  text-align: left;
+}
+
+.chat-header-text h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.chat-header-text small {
+  color: #7a6a52;
+  font-size: 0.75rem;
+}
+
+/* Área de mensajes */
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 16px;
+  min-height: 0;
+}
+
+/* Área de entrada de datos del usuario */
+.chat-input-area {
+  padding: 40px 16px 12px;
+  border-top: 1px solid #d4b68a;
+  flex-shrink: 0;
+}
+
+/* Fila de entrada */
+.chat-input-row {
+  display: flex;
+  gap: 8px;
+  padding-bottom: 15px;
+}
+
+/* Cajita donde se recibe el texto del usuario */
+.chat-input {
+  flex: 1;
+  padding: 14px;
+  border-radius: 8px;
+  border: 1px solid #d4b68a;
+  background-color: #fff1e0;
+  color: #3b2f1e;
+  font-size: 1rem;
+  outline: none;
+  font-family: inherit;
+  resize: none;
+  line-height: 1.4;
+  max-height: 120px;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+/* Ocultar la barra de desplazamiento de la cajita de texto */
+.chat-input::-webkit-scrollbar {
+  display: none;
+}
+
+/* Mensaje que aparece cuando no hay texto en la cajita */
+.chat-input::placeholder {
+  color: #7a6a52;
+  opacity: 0.6;
+}
+
+/* Botón de enviar */
+.chat-send-btn {
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: none;
+  color: #000000;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  background-color: #ddd0bd;
+}
+
+/* Activo */
+.chat-send-btn.active {
+  background-color: #da9d4d;
+  cursor: pointer;
+  border-bottom: 3.4px solid #856538;
+}
+
+/* Hover */
+.chat-send-btn:hover {
+  background-color: #e8ab5c;
+  transform: translateY(-1px);
+}
+
+/* Desactivado */
+.chat-send-btn.disabled {
+  background-color: #d4b68a;
+  opacity: 0.5;
+  cursor: wait;
+}
+
+/* Burbujas de mensaje */
+.msg-bubble-user {
+  background-color: #e3b880;
+  color: #000000;
+  border-bottom: 6px solid #856538;
+}
+
+/* Asistente */
+.msg-bubble-assistant {
+  background-color: #f0e0c8;
+  color: #3b2f1e;
+  border-bottom: 6px solid #d4b68a;
+}
+
+/*Botones de sugerencias */
+.suggestion-btn {
+  padding: 10px 14px;
+  background-color: #f0e0c8;
+  border: 1px solid #d4b68a;
+  border-radius: 8px;
+  color: #3b2f1e;
+  cursor: pointer;
+  font-size: 0.85rem;
+  text-align: left;
+  transition: all 0.2s;
+  border-bottom: 4.5px solid #d4b68a;
+}
+
+/* Hover */
+.suggestion-btn:hover {
+  background: linear-gradient(135deg, #ffb1b7, #fccc92, #fffcb2);
+  color: #000000;
+  border-bottom-color: #cd8732;
+  transform: translateY(-2px);
+}
+
+/* Panel derecho: Visualización */
+.viz-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background-color: #fffaf4;
+  height: 100%;
+  min-width: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.viz-content {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Forzar que GraphicWalker llene el espacio */
+.viz-content > div {
+  flex: 1;
+  height: 100% !important;
+  width: 100% !important;
+}
+
+/* Cuando no hay nada seleccionado */
+.viz-empty {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  color: #7a6a52;
+  text-align: center;
+  padding: 40px;
+  background: radial-gradient(circle at center, #fffaf4 0%, #fff6ec 100%);
+}
+
+.viz-empty-icon {
+  width: 80px;
+  height: 80px;
+  margin-bottom: 24px;
+  opacity: 0.2;
+  filter: grayscale(1);
+  transition: opacity 0.3s ease;
+}
+
+.viz-empty:hover .viz-empty-icon {
+  opacity: 0.4;
+}
+
+.viz-empty h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: #3b2f1e;
+}
+
+.viz-empty p {
+  max-width: 400px;
+  line-height: 1.6;
+  font-size: 0.95rem;
+  color: #9a8a72;
+}
+
+/* Selector de tipo de gráfico */
+.chart-type-bar {
+  display: flex;
+  gap: 12px;
+  padding: 12px 20px;
+  border-bottom: 1px solid #d4b68a;
+  background-color: rgba(255, 246, 236, 0.9);
+  backdrop-filter: blur(8px);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  z-index: 10;
+}
+
+/* Botones de tipo de gráfico */
+.chart-type-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid #d4b68a;
+  background-color: #fff1e0;
+  color: #3b2f1e;
+  font-size: 0.85rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-weight: 500;
+}
+
+/* Hover */
+.chart-type-btn:hover {
+  background-color: #e8ab5c;
+  border-color: #856538;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(211, 159, 90, 0.2);
+}
+
+/* Activo */
+.chart-type-btn.active {
+  background-color: #d39f5a;
+  color: #000000;
+  border-color: #856538;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  transform: translateY(0);
+}
+
+.viz-empty-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  animation: floating-icon 6s infinite ease-in-out;
+}
+
+@keyframes floating-icon {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-10px) rotate(5deg); }
+}
+
+/* Iconos de tipo de gráfico */
+.chart-type-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+/* Etiquetas de tipo de gráfico */
+.chart-type-label {
+  font-weight: 500;
+}
+
+/* Interruptor de Tema (Día) */
+.theme-switcher-grid {
+  position: relative;
+  width: 54px;
+  height: 24px;
+  background-color: #f6e4cb;
+  border-radius: 20px;
+  border: 1px solid #d4b68a;
+  cursor: pointer;
+  transition: background-color 0.8s ease, border-color 0.8s ease;
+  padding: 0;
+  margin-left: 10px;
+  overflow: hidden;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Sol */
+.sun {
+  position: absolute;
+  top: 2px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  background-color: #ffb700fc;
+  border-radius: 50%;
+  transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.8s ease;
+  z-index: 2;
+  box-shadow: 0 0 8px rgba(255, 183, 3, 0.4);
+}
+
+/* Luna */
+.moon-overlay {
+  position: absolute;
+  top: 2px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  background-color: #f6e4cb;
+  border-radius: 50%;
+  transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.8s ease, opacity 0.4s ease;
+  z-index: 3;
+  opacity: 0;
+}
+
+/* Nubes */
+.cloud-ball {
+  background-color: #ffffff;
+  border-radius: 50%;
+  width: 8px;
+  height: 8px;
+  position: absolute;
+  transition: all 0.8s ease;
+  z-index: 1;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+#ball1 { top: 9px; left: 24px; }
+#ball2 { top: 9px; left: 30px; }
+#ball3 { top: 9px; left: 36px; }
+#ball4 { top: 5px; left: 30px; }
+
+/* Estrellas */
+.star {
+  background-color: #e8dac6;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  position: absolute;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+  z-index: 1;
+}
+
+#star1 { top: 6px; left: 12px; }
+#star2 { top: 14px; left: 8px; }
+#star3 { top: 10px; left: 18px; }
+#star4 { top: 16px; left: 40px; }
+
+/* Logo */
+.header-logo {
+  height: 32px;
+  width: 32px;
+  object-fit: contain;
+  border-radius: 50%;
+  padding: 4px;
+  transition: background-color 0.25s ease, transform 0.3s ease;
+  cursor: default;
+  flex-shrink: 0;
+}
+
+/* Hover */
+.header-logo:hover {
+  background-color: rgba(255, 234, 197, 0.782);
+}
+
+/* Animación de giro */
+.header-logo.spinning {
+  animation: spin 1.2s linear infinite;
+}
+
+
+/* -----------------------------------------
+   2. ESTILOS TEMA OSCURO (Overrides)
+   ----------------------------------------- */
+
+.dark-theme .app-container {
+  background-color: #1a1612;
+  color: #e8dac6;
+}
+
+/* Panel izquierdo: Chat */
+.dark-theme .chat-panel {
+  border-right-color: #4a3f34;
+  background-color: #241f1a;
+}
+
+/* Encabezado del chat */
+.dark-theme .chat-header {
+  border-bottom-color: #4a3f34;
+}
+
+/* Texto del encabezado */
+.dark-theme .chat-header-text h2 {
+  color: #e8dac6;
+}
+
+.dark-theme .chat-header-text small {
+  color: #9a8a72;
+}
+
+/* Área de entrada de datos del usuario */
+.dark-theme .chat-input-area {
+  border-top-color: #4a3f34;
+}
+/* Caja de texto */
+.dark-theme .chat-input {
+  border-color: #e3b880;
+  background-color:#241f1a;
+  color: #e8dac6;
+}
+/* Texto de la cajita cuando esta vacia */
+.dark-theme .chat-input::placeholder {
+  color: #9a8a72;
+}
+/* Boton activo */
+.dark-theme .chat-send-btn.active {
+  background-color: #d39f5a;
+  border-bottom-color: #927a55;
+}
+/* Hover */
+.dark-theme .chat-send-btn:hover {
+  background-color: #e5b376;
+}
+/* Boton deshabilitado */
+.dark-theme .chat-send-btn.disabled {
+  background-color: #4a3f34;
+}
+/* Mensaje del usuario */
+.dark-theme .msg-bubble-user {
+  background-color: #d39f5a;
+  border-bottom-color: #927a55;
+}
+/* Mensaje del asistente */
+.dark-theme .msg-bubble-assistant {
+  background-color: #352e26;
+  color: #e8dac6;
+  border-bottom-color: #e3b880;
+}
+/* Boton */
+.dark-theme .suggestion-btn {
+  background-color: #352e26;
+  border-color: #e3b880;
+  color: #e8dac6;
+  border-bottom-color: #e3b880;
+}
+/* Hover */
+.dark-theme .suggestion-btn:hover {
+  background: linear-gradient(135deg, #40362c, #5c4e3f);
+  border-bottom-color: #d39f5a;
+  color: #e8dac6;
+  transform: translateY(-2px);
+}
+/* Panel de visualización */
+.dark-theme .viz-panel {
+  background-color: #1e1a15;
+}
+/* Mensaje de panel vacío */
+.dark-theme .viz-empty {
+  background: radial-gradient(circle at center, #1e1a15 0%, #1a1612 100%);
+}
+
+.dark-theme .viz-empty h3 {
+  color: #e8dac6;
+}
+
+.dark-theme .viz-empty p {
+  color: #9a8a72;
+}
+/* Barra de tipo de gráfico */
+.dark-theme .chart-type-bar {
+  border-bottom-color: #4a3f34;
+  background-color: rgba(36, 31, 26, 0.9);
+}
+/* Boton */
+.dark-theme .chart-type-btn {
+  border-color: #e3b880;
+  background-color: #2d261f;
+  color: #e8dac6;
+}
+/* Boton hover */
+.dark-theme .chart-type-btn:hover {
+  background-color: #e5b376;
+  border-color: #927a55;
+}
+/* Boton activo */
+.dark-theme .chart-type-btn.active {
+  border-color: #927a55;
+}
+
+/* Interruptor de Tema (Noche) */
+.dark-theme .theme-switcher-grid {
+  border-color: #d39f5a;
+}
+/* Fondo del interruptor */
+.theme-switcher-grid.night-theme {
+  background-color: #1a1612;
+}
+/* Sol */
+.theme-switcher-grid.night-theme .sun {
+  transform: translateX(30px);
+  background-color: #f8d8a8;
+  box-shadow: none;
+}
+/* Luna */
+.theme-switcher-grid.night-theme .moon-overlay {
+  transform: translateX(23px) translateY(-5px);
+  background-color: #1a1612;
+  opacity: 1;
+}
+/* Nubes */
+.theme-switcher-grid.night-theme .cloud-ball {
+  background-color: #d39f5a;
+  opacity: 0.2;
+}
+
+.theme-switcher-grid.night-theme #ball1 { top: 16px; left: 15px; width: 2px; height: 2px; }
+.theme-switcher-grid.night-theme #ball2 { top: 4px; left: 10px; width: 2px; height: 2px; }
+.theme-switcher-grid.night-theme #ball3 { top: 10px; left: 25px; width: 2px; height: 2px; }
+.theme-switcher-grid.night-theme #ball4 { top: 18px; left: 22px; width: 2px; height: 2px; }
+
+.theme-switcher-grid.night-theme .star {
+  opacity: 0.8;
+  animation: twinkle 2s infinite ease-in-out;
+}
+
+
+/* -----------------------------------------
+   3. ANIMACIONES Y RESPONSIVE 
+   ----------------------------------------- */
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+@media (max-width: 768px) {
+  .app-container {
+    flex-direction: column;
+  }
+
+  .chat-panel {
+    width: 100%;
+    max-width: 100%;
+    min-width: 100%;
+    height: 50%;
+    border-right: none;
+    border-bottom: 1px solid #d4b68a;
+  }
+
+  .viz-panel {
+    height: 50%;
+  }
+
+  /* Ocultar atribución de Leaflet */
+  .leaflet-control-attribution {
+      display: none !important;
+  }
+}

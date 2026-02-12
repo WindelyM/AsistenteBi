@@ -4,7 +4,7 @@ from sqlalchemy import Column, Integer, String, Numeric, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
-from src.app.core.database import Base
+from app.core.database import Base
 
 
 # ── Tablas de catálogo ──────────────────────────────────────────────
