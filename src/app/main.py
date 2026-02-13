@@ -13,6 +13,20 @@ from app.core.settings import settings
 def create_app() -> FastAPI:
     # Sincronizar tablas
     models.Base.metadata.create_all(bind=engine)
+    
+    # Auto-Seed: Si no hay categorías, poblamos la base de datos (ideal para Docker)
+    from sqlalchemy.orm import Session
+    from app.core.database import SessionLocal
+    try:
+        db = SessionLocal()
+        if db.query(models.Categoria).count() == 0:
+            print("Base de datos vacía detectada. Iniciando carga de datos de ejemplo (Seed)...")
+            from app.seed import populate_db
+            populate_db()
+            print("Datos de ejemplo cargados correctamente.")
+        db.close()
+    except Exception as e:
+        print(f"Error en auto-seed: {e}")
 
     # Configurar Google API Key en el entorno para LangChain
     if settings.google_api_key:

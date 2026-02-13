@@ -72,6 +72,11 @@
   overflow-x: hidden;
   padding: 16px;
   min-height: 0;
+  scrollbar-width: none; /* Firefox */
+}
+
+.chat-messages::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
 }
 
 /* Área de entrada de datos del usuario */
