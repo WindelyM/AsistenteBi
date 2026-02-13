@@ -193,13 +193,17 @@ async def ask_ai(request: AskRequest):
         {custom_system_message}
         
         FORMATO DE SALIDA ESTRICTO:
-        1. PRIMERO: Tu respuesta textual amigable y detallada (basada en el manual si aplica).
-        2. SEGUNDO: Si la pregunta implica datos numéricos (ventas, rendimiento, cantidades, etc.), DEBES incluir ABSOLUTAMENTE un bloque de código SQL válido al final de tu respuesta.
-        
+        1. PRIMERO: Tu respuesta textual.
+           - Si la pregunta NO tiene sentido o NO está relacionada con Ventas, Productos, Vendedores o el Manual, responde EXACTAMENTE así: "¡Hola! No he podido comprender tu mensaje. Soy un asistente de BI especializado y puedo ayudarte con consultas sobre Ventas, Vendedores, Productos, Categorías o el Manual de Usuario. ¿En qué puedo apoyarte hoy?"
+        2. SEGUNDO: El bloque SQL.
+           - Si la pregunta requiere datos numéricos: GENERA EL BLOQUE SQL COMPLETO.
+           - Si la pregunta es sobre el manual o políticas (texto puro): NO ESCRIBAS NADA MÁS. NO PONGAS ```sql ``` VACÍOS.
+
         Estructura obligatoria:
         [Tu respuesta en texto aquí...]
         
         ```sql
+        (SOLO SI ES NECESARIO, SI NO, NO PONGAS ESTE BLOQUE)
         SELECT ...
         ```
         """
