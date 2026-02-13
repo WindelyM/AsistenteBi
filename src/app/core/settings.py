@@ -1,3 +1,4 @@
+# Importar librerías
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -8,10 +9,14 @@ class Settings(BaseSettings):
     app_port: int = 8000
     app_debug: bool = False
     
+    # Configuración de base de datos
     database_url: str = "postgresql+psycopg2://postgres:postgres@127.0.0.1:5432/asistentebi"
+    
+    # Configuración de Google Gemini
     google_api_key: str = ""
 
+    # Configuración de Pydantic Settings
     model_config = SettingsConfigDict(env_prefix="APP_", env_file=".env", extra="ignore", case_sensitive=False)
 
-
+# Crear configuración
 settings = Settings()

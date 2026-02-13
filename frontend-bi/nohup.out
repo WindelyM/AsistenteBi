@@ -1,0 +1,13 @@
+
+> frontend-bi@0.0.0 dev
+> vite
+
+
+  VITE v7.3.1  ready in 412 ms
+
+  ➜  Local:   http://localhost:3001/
+  ➜  Network: use --host to expose
+8:54:52 AM [vite] (client) hmr update /src/App.css
+9:02:25 AM [vite] (client) hmr update /src/App.jsx
+9:03:15 AM [vite] (client) hmr update /src/index.css
+9:03:31 AM [vite] (client) page reload src/main.jsx

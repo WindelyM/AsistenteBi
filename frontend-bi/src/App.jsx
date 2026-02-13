@@ -1,8 +1,10 @@
+/* Para que eslint no se queje de las variables no usadas */
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { GraphicWalker } from '@kanaries/graphic-walker';
 import './App.css';
 import logo from './assets/logo.png';
 
+/* Tipos de gráficos que se pueden generar */
 const CHART_TYPES = [
   { id: 'bar', label: 'Barras' },
   { id: 'line', label: 'Líneas' },
@@ -11,6 +13,7 @@ const CHART_TYPES = [
   { id: 'point', label: 'Dispersión' },
 ];
 
+/* Tema personalizado para GraphicWalker */
 const CUSTOM_UI_THEME = {
   light: {
     background: '#fffaf4',
@@ -33,6 +36,8 @@ const CUSTOM_UI_THEME = {
     dimension: '#3b2f1e',
     measure: '#d39f5a',
   },
+
+  /* Tema oscuro */
   dark: { 
     background: '#1e1a15',
     foreground: '#e8dac6',
@@ -55,6 +60,7 @@ const CUSTOM_UI_THEME = {
     measure: '#d39f5a',
   }
 };
+/* Componente para manejar errores en GraphicWalker */
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -89,7 +95,7 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-
+/* Componente principal */
 const App = () => {
   const [messages, setMessages] = useState([]);
   const [prompt, setPrompt] = useState("");
@@ -103,13 +109,14 @@ const App = () => {
     key: 0
   });
   const chatEndRef = useRef(null);
-
+/* Para hacer scroll al final del chat */
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
 
+/* Genera los campos del gráfico a partir de los datos */
   const generateFields = useCallback((data) => {
     if (!data || !Array.isArray(data) || data.length === 0) return [];
     const sample = data[0];
@@ -119,6 +126,7 @@ const App = () => {
       let analyticType = 'dimension';
       let dataType = 'string';
 
+/* Detecta el tipo de dato */
       if (typeof value === 'number') {
         semanticType = 'quantitative';
         analyticType = 'measure';
@@ -128,6 +136,7 @@ const App = () => {
         dataType = 'datetime';
       }
 
+/* Crea el campo */
       const f = {
         fid: String(key),
         name: key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' '),
@@ -136,7 +145,8 @@ const App = () => {
         dataType, 
         basename: String(key),
       };
-      // Invariant redundante para GraphicWalker 0.4.80
+
+/* Invariant redundante para GraphicWalker 0.4.80 */
       return {
         ...f,
         key: f.fid,
@@ -146,6 +156,7 @@ const App = () => {
     });
   }, []);
 
+/* Genera la especificación del gráfico */
   const generateChartSpec = useCallback((fields, type) => {
     if (!fields || !Array.isArray(fields) || fields.length === 0) return null;
     
@@ -192,6 +203,7 @@ const App = () => {
       facetColumns: []
     };
 
+/* Tipo de gráfico circular */
     if (type === 'arc') {
       encodings.columns = [];
       encodings.rows = [];
@@ -216,6 +228,7 @@ const App = () => {
     }];
   }, []);
 
+  /* Maneja el cambio de tipo de gráfico */
   const handleChartTypeChange = useCallback((type) => {
     if (vizState.fields.length > 0) {
       const newChart = generateChartSpec(vizState.fields, type);
@@ -228,6 +241,7 @@ const App = () => {
     }
   }, [vizState.fields, generateChartSpec]);
 
+  /* Maneja la pregunta al backend */
   const handleAskBackend = useCallback(async () => {
     if (!prompt.trim() || loading) return;
     const userMsg = prompt.trim();
@@ -237,7 +251,8 @@ const App = () => {
     setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
 
     try {
-      const resp = await fetch('http://127.0.0.1:8000/ask', {
+
+      const resp = await fetch('http://127.0.0.1:8001/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: userMsg })
@@ -247,7 +262,8 @@ const App = () => {
         const errData = await resp.json().catch(() => ({}));
         throw new Error(errData.detail || resp.statusText);
       }
-      
+
+ /* Convierte la respuesta a JSON */
       const result = await resp.json();
 
       if (result.status === 'success') {
@@ -266,6 +282,7 @@ const App = () => {
           }));
         }
 
+/* Añade la respuesta del asistente */
         setMessages(prev => [...prev, {
           role: 'assistant',
           text: result.answer || (result.data?.length > 0 ? `Se encontraron ${result.data.length} resultados.` : 'Sin resultados.')
@@ -315,7 +332,7 @@ const App = () => {
           </div>
         </div>
 
-        {/* Messages */}
+        {/* Mensajes */}
         <div className="chat-messages">
           {messages.length === 0 && (
             <div style={{ textAlign: 'left', color: '#7a6a52', marginTop: '20px', marginBottom: '20px' }}>
@@ -335,7 +352,7 @@ const App = () => {
               </div>
             </div>
           )}
-          
+          {/* Muestra los mensajes */}
           {messages.map((msg, i) => (
             <div key={i} style={{
               marginBottom: '12px',
@@ -357,6 +374,7 @@ const App = () => {
             </div>
           ))}
 
+        {/* Muestra el loading (cargando) */}
           {loading && (
             <div style={{ color: '#7a6a52', fontSize: '0.85rem', padding: '8px' }}>
               <span style={{ animation: 'pulse 1.5s infinite' }}>⏳</span> Analizando...

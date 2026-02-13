@@ -1,6 +1,4 @@
-/* -----------------------------------------
-   1. ESTILOS GENERALES Y TEMA CLARO (Default)
-   ----------------------------------------- */
+/* -- Estilos generales y tema claro (Default) --*/
 
 /* Layout principal */
 .app-container {
@@ -54,12 +52,14 @@
   text-align: left;
 }
 
+/* Encabezado del chat */
 .chat-header-text h2 {
   margin: 0;
   font-size: 1.5rem;
   font-weight: 600;
 }
 
+/* Texto pequeño debajo del encabezado */
 .chat-header-text small {
   color: #7a6a52;
   font-size: 0.75rem;
@@ -197,6 +197,7 @@
   position: relative;
 }
 
+/* Contenedor de visualización de los gráficos */
 .viz-content {
   flex: 1;
   min-height: 0;
@@ -226,6 +227,7 @@
   background: radial-gradient(circle at center, #fffaf4 0%, #fff6ec 100%);
 }
 
+/* Icono de vacío */
 .viz-empty-icon {
   width: 80px;
   height: 80px;
@@ -234,11 +236,13 @@
   transition: all 0.3s ease;
 }
 
+/* Hover */
 .viz-empty:hover .viz-empty-icon {
   opacity: 1;
   transform: scale(1.05);
 }
 
+/* Título de vacío */
 .viz-empty h3 {
   font-size: 1.5rem;
   font-weight: 600;
@@ -246,6 +250,7 @@
   color: #3b2f1e;
 }
 
+/* Párrafo de vacío */
 .viz-empty p {
   max-width: 400px;
   line-height: 1.6;
@@ -300,6 +305,7 @@
   transform: translateY(0);
 }
 
+/* Animación del icono */
 .viz-empty-icon img {
   width: 100%;
   height: 100%;
@@ -307,6 +313,7 @@
   animation: floating-icon 6s infinite ease-in-out;
 }
 
+/* Animación del icono */
 @keyframes floating-icon {
   0%, 100% { transform: translateY(0) rotate(0deg); }
   50% { transform: translateY(-10px) rotate(5deg); }
@@ -318,7 +325,7 @@
   line-height: 1;
 }
 
-/* Etiquetas de tipo de gráfico */
+/* Etiquetas de tipo de gráfico para las letras */
 .chart-type-label {
   font-weight: 500;
 }
@@ -379,6 +386,7 @@
   box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
+/* Posición de las nubes */
 #ball1 { top: 9px; left: 24px; }
 #ball2 { top: 9px; left: 30px; }
 #ball3 { top: 9px; left: 36px; }
@@ -396,6 +404,7 @@
   z-index: 1;
 }
 
+/* Posición de las estrellas */
 #star1 { top: 6px; left: 12px; }
 #star2 { top: 14px; left: 8px; }
 #star3 { top: 10px; left: 18px; }
@@ -426,9 +435,7 @@
 }
 
 
-/* -----------------------------------------
-   2. ESTILOS TEMA OSCURO (Overrides)
-   ----------------------------------------- */
+/* -- Estilos Tema Oscuro (Overrides) -- */
 
 .dark-theme .app-container {
   background-color: #1a1612;
@@ -570,36 +577,40 @@
   opacity: 0.2;
 }
 
+/* Posición de las nubes que cambian porque ahora tiene que ir al revés*/
 .theme-switcher-grid.night-theme #ball1 { top: 16px; left: 15px; width: 2px; height: 2px; }
 .theme-switcher-grid.night-theme #ball2 { top: 4px; left: 10px; width: 2px; height: 2px; }
 .theme-switcher-grid.night-theme #ball3 { top: 10px; left: 25px; width: 2px; height: 2px; }
 .theme-switcher-grid.night-theme #ball4 { top: 18px; left: 22px; width: 2px; height: 2px; }
 
+/* Posición de las estrellas, idem al anterior */
 .theme-switcher-grid.night-theme .star {
   opacity: 0.8;
   animation: twinkle 2s infinite ease-in-out;
 }
 
 
-/* -----------------------------------------
-   3. ANIMACIONES Y RESPONSIVE 
-   ----------------------------------------- */
+/* -- Animaciones y Responsive -- */
 
+/* Animación del icono */
 @keyframes spin {
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
 }
 
+/* Animación de las estrellas */
 @keyframes twinkle {
   0%, 100% { opacity: 0.3; }
   50% { opacity: 1; }
 }
 
+/* Responsive */
 @media (max-width: 768px) {
   .app-container {
     flex-direction: column;
   }
 
+  /* Panel izquierdo: Chat */
   .chat-panel {
     width: 100%;
     max-width: 100%;
@@ -609,6 +620,7 @@
     border-bottom: 1px solid #d4b68a;
   }
 
+  /* Panel derecho: Visualización */
   .viz-panel {
     height: 50%;
   }

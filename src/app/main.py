@@ -1,13 +1,15 @@
+# Importar librerías
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+# Importar rutas
 from app.api.routes import health, root, ask
 from app.core.database import engine
 from app import models
 from app.core.settings import settings
 
-
+# Crear la aplicación FastAPI
 def create_app() -> FastAPI:
     # Sincronizar tablas
     models.Base.metadata.create_all(bind=engine)
@@ -19,6 +21,7 @@ def create_app() -> FastAPI:
     else:
         print("ADVERTENCIA: No se encontró la clave GOOGLE_API_KEY")
 
+    # Configurar FastAPI
     app = FastAPI(
         title=settings.app_name,
         description="Microservicio de BI con Exploración de Datos Interactiva GenBI",
@@ -42,5 +45,5 @@ def create_app() -> FastAPI:
 
     return app
 
-
+# Crear la aplicación
 app = create_app()

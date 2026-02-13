@@ -4,6 +4,7 @@
   box-sizing: border-box;
 }
 
+/* Paleta de colores */
 :root {
   font-family: 'Segoe UI', 'Inter', system-ui, sans-serif;
   line-height: 1.5;
@@ -17,6 +18,7 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Para que el body ocupe toda la pantalla */
 html {
   height: 100%;
 }
@@ -26,20 +28,25 @@ body {
   overflow: hidden;
 }
 
+/* Para que el root ocupe toda la pantalla */
 #root {
   height: 100%;
   overflow: hidden;
 }
 
+/* Para que los enlaces se vean bien */
 a {
   font-weight: 500;
   color: #b07d3a;
   text-decoration: inherit;
 }
+
+/* Para que los enlaces se vean bien al pasar el mouse */
 a:hover {
   color: #8a5e20;
 }
 
+/* Para que los botones se vean bien */
 button {
   border-radius: 8px;
   border: 1px solid transparent;
@@ -52,10 +59,14 @@ button {
   cursor: pointer;
   transition: border-color 0.25s, background-color 0.25s;
 }
+
+/* Para que los botones se vean bien al pasar el mouse */
 button:hover {
   border-color: #b07d3a;
   background-color: #dbb88e;
 }
+
+/* Para que los botones se vean bien al hacer focus */
 button:focus,
 button:focus-visible {
   outline: 2px solid #b07d3a;
