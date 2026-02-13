@@ -4,7 +4,7 @@ Bienvenido al **Asistente de Business Intelligence (BI)** alimentado por Intelig
 
 ---
 
-## 🚀 Inicio Rápido
+## Inicio Rápido
 
 1.  **Consulta por Chat**: Escribe tu pregunta en el panel izquierdo (ej: "¿Cuáles son las ventas por categoría?").
 2.  **Análisis de IA**: El asistente traducirá tu pregunta a SQL, consultará la base de datos y te dará una respuesta contextual.
@@ -12,7 +12,7 @@ Bienvenido al **Asistente de Business Intelligence (BI)** alimentado por Intelig
 
 ---
 
-## 📊 Funcionalidades del Panel de Visualización
+## Funcionalidades del Panel de Visualización
 
 El sistema utiliza **GraphicWalker**, una potente herramienta de exploración de datos:
 
@@ -23,7 +23,7 @@ El sistema utiliza **GraphicWalker**, una potente herramienta de exploración de
 
 ---
 
-## 🌗 Personalización y Tema
+## Personalización y Tema
 
 -   **Selector de Tema**: Arriba a la derecha encontrarás un interruptor animado (Sol/Luna).
 -   **Modo Claro**: Ideal para entornos con mucha luz, con colores cálidos y legibilidad clásica.
@@ -31,7 +31,7 @@ El sistema utiliza **GraphicWalker**, una potente herramienta de exploración de
 
 ---
 
-## 📝 Guía de Consultas Sugeridas
+## Guía de Consultas Sugeridas
 
 Puedes preguntar por cualquier entidad del sistema (Ventas, Vendedores, Productos, Categorías, Regiones):
 
@@ -42,7 +42,7 @@ Puedes preguntar por cualquier entidad del sistema (Ventas, Vendedores, Producto
 
 ---
 
-## 🛠️ Resolución de Problemas (Troubleshooting)
+## Resolución de Problemas (Troubleshooting)
 
 ### El gráfico no carga o muestra un error
 -   Haz clic en el botón **"Reintentar Visualización"** que aparece en el panel derecho.
@@ -50,9 +50,3 @@ Puedes preguntar por cualquier entidad del sistema (Ventas, Vendedores, Producto
 
 ### La IA no responde o devuelve error de red
 -   Espera unos segundos y vuelve a enviar tu consulta. El sistema tiene límites de cuota inteligentes para garantizar la disponibilidad.
-
----
-
-## 📧 Soporte y Contacto
-
-Para problemas técnicos avanzados o solicitudes de nuevas métricas, contactar a: **soporte@asistentebi.com**.
