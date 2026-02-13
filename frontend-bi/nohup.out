@@ -11,3 +11,34 @@
 9:02:25 AM [vite] (client) hmr update /src/App.jsx
 9:03:15 AM [vite] (client) hmr update /src/index.css
 9:03:31 AM [vite] (client) page reload src/main.jsx
+
+> frontend-bi@0.0.0 dev
+> vite
+
+Port 3000 is in use, trying another one...
+
+  VITE v7.3.1  ready in 142 ms
+
+  ➜  Local:   http://localhost:3001/
+  ➜  Network: use --host to expose
+
+> frontend-bi@0.0.0 dev
+> vite
+
+
+  VITE v7.3.1  ready in 255 ms
+
+  ➜  Local:   http://localhost:3000/
+  ➜  Network: use --host to expose
+
+> frontend-bi@0.0.0 dev
+> vite
+
+Port 3000 is in use, trying another one...
+
+  VITE v7.3.1  ready in 184 ms
+
+  ➜  Local:   http://localhost:3001/
+  ➜  Network: use --host to expose
+Killed
+Killed

@@ -46,7 +46,7 @@ def get_llm():
         print("DEBUG: Inicializando LLM...", flush=True)
         try:
             genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
-            # Usamos gemini-flash-latest para intentar encontrar cuota disponible
+            # Usamos gemini-flash-latest 
             llm = ChatGoogleGenerativeAI(
                 model="gemini-flash-latest",
                 temperature=0,
@@ -59,7 +59,7 @@ def get_llm():
     return llm
 
 
-# Prompt del sistema 
+# Prompt del  para que la ia sepa que hacer
 
 custom_system_message = """
       Actúa como un Motor de Consulta de Datos para un sistema de BI.
@@ -133,10 +133,10 @@ def process_data_with_pandas(raw_data: Any) -> List[dict]:
         if df.empty:
             return []
         
-        # 1. Rellenar nulos
+        # Rellenar nulos
         df = df.fillna("")
 
-        # 2. Convertir object/Decimal a float si es necesario
+        # Convertir object/Decimal a float si es necesario
         # Iteramos columnas object para ver si contienen Decimals
         import decimal
         for col in df.select_dtypes(include=['object']).columns:
@@ -147,7 +147,7 @@ def process_data_with_pandas(raw_data: Any) -> List[dict]:
             except Exception:
                 pass # Si falla, se queda como estaba (probablemente string)
 
-        # 3. Formatear fechas a string ISO
+        # Formatear fechas a string ISO
         for col in df.select_dtypes(include=['datetime64[ns]', 'datetimetz']).columns:
             df[col] = df[col].dt.strftime("%Y-%m-%d %H:%M:%S")
 
@@ -180,7 +180,7 @@ async def ask_ai(request: AskRequest):
 
         system_message = f"""Eres un Asistente de BI Inteligente experto en ventas y políticas de empresa.
         
-        REGLAS DE ORO:
+        REGLAS:
         1. Si la pregunta requiere datos, genera una única consulta SQL válida para PostgreSQL.
         2. Si la pregunta es sobre políticas o el manual, usa la información de abajo.
         3. Devuelve SIEMPRE una respuesta textual amigable.
@@ -203,7 +203,7 @@ async def ask_ai(request: AskRequest):
         SELECT ...
         ```
         """
-
+        # Mensaje que le enviamos a la ia
         messages = [
             ("system", system_message),
             ("user", request.prompt)
@@ -231,7 +231,7 @@ async def ask_ai(request: AskRequest):
         res_text = clean_all(response.content)
         data = []
         
-        # 1. Extraer SQL con regex más flexible (con o sin etiqueta 'sql')
+        # Extraer SQL más flexible (con o sin etiqueta 'sql')
         import re
         sql_match = re.search(r"```(?:sql)?\s*(SELECT.*?)```", res_text, re.DOTALL | re.IGNORECASE)
         if sql_match:
@@ -247,7 +247,7 @@ async def ask_ai(request: AskRequest):
                 print(f"ERROR SQL: {e}", flush=True)
                 data = [{"error": str(e)}]
 
-        # 2. Generar sugerencia de gráfico más inteligente
+        # Generar sugerencia de gráfico más inteligente
         suggestion = "bar"
         if data:
             keys = [k.lower() for k in data[0].keys()]
@@ -264,7 +264,7 @@ async def ask_ai(request: AskRequest):
             elif len(data) > 10:
                 suggestion = "bar"
 
-        # 3. Respuesta final
+        # Respuesta final
         if not res_text and data:
             res_text = f"He encontrado {len(data)} registros para tu consulta."
         elif not res_text:
@@ -276,7 +276,7 @@ async def ask_ai(request: AskRequest):
             "answer": res_text,
             "status": "success"
         }
-
+    # Manejo de errores
     except HTTPException as he:
         raise he
     except Exception as e:

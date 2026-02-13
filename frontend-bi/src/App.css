@@ -117,7 +117,7 @@
   opacity: 0.6;
 }
 
-/* Botón de enviar */
+/* -- Botón de enviar -- */
 .chat-send-btn {
   padding: 12px 16px;
   border-radius: 8px;
@@ -149,7 +149,7 @@
   cursor: wait;
 }
 
-/* Burbujas de mensaje */
+/* -- Burbujas de mensaje -- */
 .msg-bubble-user {
   background-color: #e3b880;
   color: #000000;
@@ -185,7 +185,7 @@
   transform: translateY(-2px);
 }
 
-/* Panel derecho: Visualización */
+/* -- Panel derecho: Visualización -- */
 .viz-panel {
   flex: 1;
   display: flex;
@@ -330,7 +330,7 @@
   font-weight: 500;
 }
 
-/* Interruptor de Tema (Día) */
+/* -- Interruptor de Tema (Día) -- */
 .theme-switcher-grid {
   position: relative;
   width: 54px;
@@ -410,7 +410,7 @@
 #star3 { top: 10px; left: 18px; }
 #star4 { top: 16px; left: 40px; }
 
-/* Logo */
+/* -- Logo -- */
 .header-logo {
   height: 32px;
   width: 32px;
@@ -424,7 +424,7 @@
 
 /* Hover */
 .header-logo:hover {
-  background-color: rgba(211, 159, 90, 0.2);
+  background: radial-gradient(circle, rgba(255, 178, 11, 0.889) 0%, transparent 52%);
   transform: scale(1.1);
   animation: spin 3s linear infinite;
 }
@@ -483,7 +483,7 @@
 }
 /* Hover */
 .dark-theme .chat-send-btn:hover {
-  background-color: #e5b376;
+  background-color: #e8a022;
 }
 /* Boton deshabilitado */
 .dark-theme .chat-send-btn.disabled {
@@ -509,8 +509,8 @@
 }
 /* Hover */
 .dark-theme .suggestion-btn:hover {
-  background: linear-gradient(135deg, #40362c, #5c4e3f);
-  border-bottom-color: #d39f5a;
+  background: linear-gradient(135deg, #1e1a15, #e8a022);
+  border-bottom-color: #7d581a;
   color: #e8dac6;
   transform: translateY(-2px);
 }
@@ -543,7 +543,7 @@
 }
 /* Boton hover */
 .dark-theme .chart-type-btn:hover {
-  background-color: #e5b376;
+  background-color: #d39f5a;
   border-color: #927a55;
 }
 /* Boton activo */

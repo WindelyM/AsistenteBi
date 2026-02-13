@@ -29,7 +29,7 @@ def create_app() -> FastAPI:
         debug=settings.app_debug,
     )
 
-    # CORS
+    # CORS (permisos para que el front pueda comunicarse con el back)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
