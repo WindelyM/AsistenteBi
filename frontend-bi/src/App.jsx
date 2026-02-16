@@ -312,9 +312,15 @@ const App = () => {
     } catch (err) {
       setLoading(false);
       console.error("Fetch Error:", err);
+      
+      const isGH = window.location.hostname.includes('github.io');
+      const errorMsg = isGH 
+        ? "⚠️ Esta es una DEMO ESTÁTICA de la interfaz. Para utilizar la IA y Base de Datos completa, descarga el proyecto y ejecútalo con Docker siguiendo el README."
+        : `Lo siento, ha ocurrido un problema: ${err.message}.`;
+
       setMessages(prev => [...prev, { 
         role: 'assistant', 
-        text: `Lo siento, ha ocurrido un problema: ${err.message}.` 
+        text: errorMsg 
       }]);
     }
   }, [prompt, loading, generateFields, generateChartSpec]);
