@@ -1,33 +1,28 @@
-# Dockerfile para frontend-bi
+# Etapa 1: Construcción
 FROM node:20-slim AS build
 
-# Directorio de trabajo
 WORKDIR /app
 
-# Copia los archivos de dependencias
+# Copia dependencias
 COPY package*.json ./
-
-# Instala las dependencias
 RUN npm install --legacy-peer-deps
 
-# Copia el resto de los archivos
+# Copia código fuente
 COPY . .
 
 # Construye la aplicación
 RUN npm run build
 
-# Etapa final
-FROM node:20-slim
+# Etapa 2: Servidor Web (Nginx)
+FROM nginx:alpine
 
-# Directorio de trabajo
-WORKDIR /app
+# Copia el build de React al directorio de Nginx
+COPY --from=build /app/dist /usr/share/nginx/html
 
-# Instala serve globalmente
-RUN npm install -g serve
+# Copia configuración personalizada de Nginx si fuera necesaria (opcional)
+# COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Copia la aplicación construida
-COPY --from=build /app/dist ./dist
+# Exponer el puerto 80
+EXPOSE 80
 
-# Expone el puerto 3000
-EXPOSE 3000
-CMD ["serve", "-s", "dist", "-l", "3000"]
+CMD ["nginx", "-g", "daemon off;"]

@@ -15,8 +15,9 @@ RUN apt-get update && \
 COPY pyproject.toml ./
 RUN pip install --no-cache-dir .
 
-# Copiar código fuente
+# Copiar código fuente y archivos necesarios
 COPY src/ ./src/
+COPY manual_usuario.md ./
 
 EXPOSE 8000
 

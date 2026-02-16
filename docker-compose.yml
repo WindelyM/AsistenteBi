@@ -1,33 +1,63 @@
 services:
   db:
     image: postgres:15
+    container_name: bi-database
     restart: always
     env_file:
       - .env
-    ports:
-      - "5433:5432"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-Windely16}
+      - POSTGRES_DB=${POSTGRES_DB:-asistentebi}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-postgres} -d $${POSTGRES_DB:-asistentebi}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   api:
     build: .
-    ports:
-      - "8000:8000"
+    container_name: bi-api
+    expose: 
+      - "8000"
     env_file:
       - .env
+    environment:
+      - APP_POSTGRES_HOST=db
+      - APP_DATABASE_URL=postgresql+psycopg2://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-Windely16}@db:5432/${POSTGRES_DB:-asistentebi}
+      - APP_DEBUG=${APP_DEBUG:-True}
+      - APP_GOOGLE_API_KEY=${APP_GOOGLE_API_KEY:-AIzaSyDeBC4p3w7mLEzzOIi9q_S7u52HrK1hq8s}
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     restart: unless-stopped
-    volumes:
-      - ./src:/app/src
-      - .env:/app/.env
+    # volumes:
+    #   - ./src:/app/src
+    #   - .env:/app/.env
 
   frontend:
     build:
       context: ./frontend-bi
-    ports:
-      - "3000:3000"
+    container_name: bi-frontend
+    expose:
+      - "80"
+    depends_on:
+      - api
     restart: unless-stopped
+
+  nginx:
+    image: nginx:stable-alpine
+    container_name: bi-nginx
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - frontend
+      - api
 
 volumes:
   postgres_data:

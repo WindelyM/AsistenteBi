@@ -635,3 +635,25 @@
       display: none !important;
   }
 }
+
+/* -- Ajustes específicos para GraphicWalker -- */
+
+/* Intentar reducir el ancho de la columna "Field List" */
+/* Usamos selectores de atributo para intentar cazar la clase interna */
+div[class*="field-list"], 
+div[class*="FieldList"],
+div[class*="fieldList"],
+div[role="complementary"] > div > div:first-child {
+  width: 200px !important;
+  min-width: 200px !important;
+  max-width: 200px !important;
+}
+
+/* Ajuste para pantallas pequeñas */
+@media (max-width: 1024px) {
+  div[class*="field-list"], 
+  div[class*="FieldList"] {
+    width: 160px !important;
+    min-width: 160px !important;
+  }
+}

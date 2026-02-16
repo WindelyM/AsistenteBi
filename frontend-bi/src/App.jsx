@@ -109,6 +109,43 @@ const App = () => {
     key: 0
   });
   const chatEndRef = useRef(null);
+  
+  /* Supresión de advertencias y logs molestos */
+  useEffect(() => {
+    const originalError = console.error;
+    const originalWarn = console.warn;
+    const originalLog = console.log;
+    
+    console.error = (...args) => {
+      if (/defaultProps/.test(args[0])) return;
+      originalError.apply(console, args);
+    };
+
+    console.warn = (...args) => {
+      const msg = args.map(a => String(a)).join(' ');
+      if (
+        /Infinite extent/.test(msg) || 
+        /total_ventas_sum/.test(msg) ||
+        /scale domain/.test(msg) ||
+        /found 0/.test(msg)
+      ) return;
+      originalWarn.apply(console, args);
+    };
+    
+    /* Filtrar logs de "local query triggered" */
+    console.log = (...args) => {
+       const msg = args.map(a => String(a)).join(' ');
+       if (/local query triggered/.test(msg)) return; 
+       originalLog.apply(console, args);
+    };
+
+    return () => {
+      console.error = originalError;
+      console.warn = originalWarn;
+      console.log = originalLog;
+    };
+  }, []);
+
 /* Para hacer scroll al final del chat */
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -116,115 +153,80 @@ const App = () => {
 
   const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
 
-/* Genera los campos del gráfico a partir de los datos */
+  /* --- 1. GENERATE FIELDS CORREGIDO --- */
   const generateFields = useCallback((data) => {
-    if (!data || !Array.isArray(data) || data.length === 0) return [];
+    if (!data || data.length === 0) return [];
     const sample = data[0];
     return Object.keys(sample).map(key => {
       const value = sample[key];
-      let semanticType = 'nominal';
-      let analyticType = 'dimension';
-      let dataType = 'string';
+      // Una métrica es algo que tiene un nombre "ventas/total" o es un número
+      const isMetric = typeof value === 'number' || /ventas|total|monto|monto|cantidad|precio/i.test(key);
 
-/* Detecta el tipo de dato */
-      if (typeof value === 'number') {
-        semanticType = 'quantitative';
-        analyticType = 'measure';
-        dataType = 'number';
-      } else if (typeof value === 'string' && value.includes('-') && !isNaN(Date.parse(value))) {
-        semanticType = 'temporal';
-        dataType = 'datetime';
-      }
-
-/* Crea el campo */
-      const f = {
-        fid: String(key),
-        name: key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' '),
-        semanticType,
-        analyticType,
-        dataType, 
-        basename: String(key),
-      };
-
-/* Invariant redundante para GraphicWalker 0.4.80 */
       return {
-        ...f,
-        key: f.fid,
-        id: f.fid,
-        dragId: f.fid
+        fid: key, 
+        name: key.replace(/_/g, ' '),
+        semanticType: isMetric ? 'quantitative' : 'nominal',
+        analyticType: isMetric ? 'measure' : 'dimension',
+        dataType: isMetric ? 'number' : 'string',
+        basename: key,
+        key: key,
+        id: key,
+        dragId: key
       };
     });
   }, []);
 
-/* Genera la especificación del gráfico */
+  /* --- 2. GENERATE CHART SPEC CORREGIDO --- */
   const generateChartSpec = useCallback((fields, type) => {
-    if (!fields || !Array.isArray(fields) || fields.length === 0) return null;
-    
+    if (!fields || fields.length === 0) return []; // Retornar Array vacío, NUNCA null
+
     const dimensions = fields.filter(f => f.analyticType === 'dimension');
     const measures = fields.filter(f => f.analyticType === 'measure');
     
-    if (measures.length === 0) return null;
+    if (measures.length === 0) return [];
 
-    const dimField = dimensions.length > 0 ? dimensions[0] : null;
+    const dimField = dimensions[0];
     const measField = measures[0];
 
     const mapField = (f, extra = {}) => ({
       fid: f.fid,
       name: f.name || f.fid,
-      analyticType: f.analyticType || 'dimension',
-      semanticType: f.semanticType || 'nominal',
-      dataType: f.dataType || 'string',
+      analyticType: f.analyticType,
+      semanticType: f.semanticType,
+      dataType: f.dataType,
       basename: f.fid,
-      dragId: f.fid,
       ...extra
     });
 
-    // Encodings exhaustivos para evitar el error de length en visSpecHistory.ts
     const encodings = {
       dimensions: dimensions.map(d => mapField(d)),
       measures: measures.map(m => mapField(m)),
-      rows: [ mapField(measField, { aggName: 'sum' }) ],
+      rows: [ mapField(measField, { aggName: 'sum', stack: 'none' }) ],
       columns: dimField ? [ mapField(dimField) ] : [],
-      color: dimField && type !== 'line' && type !== 'area' ? [ mapField(dimField) ] : [],
-      opacity: [], 
-      size: [], 
-      shape: [], 
-      theta: [], 
-      radius: [], 
-      details: [], 
-      filters: [], 
-      text: [],
-      longitude: [],
-      latitude: [],
-      geoId: [],
-      facetX: [],
-      facetY: [],
-      facetRows: [],
-      facetColumns: []
+      color: [], theta: [], radius: [], opacity: [], size: [], shape: [],
+      details: [], filters: [], text: [], longitude: [], latitude: [], 
+      geoId: [], facetX: [], facetY: [], facetRows: [], facetColumns: []
     };
 
-/* Tipo de gráfico circular */
     if (type === 'arc') {
       encodings.columns = [];
       encodings.rows = [];
       encodings.theta = [ mapField(measField, { aggName: 'sum' }) ];
-      if (dimField) {
-        encodings.color = [ mapField(dimField) ];
-      }
+      if (dimField) encodings.color = [ mapField(dimField) ]; // Color para el Pastel
+    } else if (type === 'bar') {
+      if (dimField) encodings.color = [ mapField(dimField) ]; // Color para Barras
     }
-    
+    // Líneas y Áreas se quedan sin color para evitar que desaparezcan
+
     return [{
-      visId: 'auto-chart-main',
+      visId: 'main-viz',
       name: 'Análisis IA',
       encodings,
       config: { 
         defaultAggregated: true, 
-        geoms: [type === 'arc' ? 'arc' : type], 
+        geoms: [type === 'arc' ? 'arc' : type],
       },
-      layout: { 
-        showTableSummary: false, 
-        size: { mode: 'full', width: 800, height: 600 } 
-      },
+      layout: { showTableSummary: false, size: { mode: 'full', width: 800, height: 600 } },
     }];
   }, []);
 
@@ -241,67 +243,79 @@ const App = () => {
     }
   }, [vizState.fields, generateChartSpec]);
 
-  /* Maneja la pregunta al backend */
+      /* El Manejador del Backend (handleAskBackend) */
   const handleAskBackend = useCallback(async () => {
     if (!prompt.trim() || loading) return;
     const userMsg = prompt.trim();
     setPrompt("");
     setLoading(true);
-    setVizState({ data: [], fields: [], chart: null, type: 'bar', key: Date.now() });
+
+    // RESET preventivo para limpiar el Worker interno de GraphicWalker
+    setVizState({ data: null, fields: [], chart: [], type: 'bar', key: Date.now() });
     setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
 
     try {
-
-      const resp = await fetch('http://127.0.0.1:8000/ask', {
+      const resp = await fetch('/api/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: userMsg })
       });
 
       if (!resp.ok) {
-        const errData = await resp.json().catch(() => ({}));
-        throw new Error(errData.detail || resp.statusText);
+        const errorText = await resp.text(); 
+        throw new Error(`Error ${resp.status}: ${errorText.substring(0, 50)}...`); 
       }
 
- /* Convierte la respuesta a JSON */
       const result = await resp.json();
 
-      if (result.status === 'success') {
-        const dataArr = Array.isArray(result.data) ? result.data : [];
-        const fieldsData = generateFields(dataArr);
-        
-        if (dataArr.length > 0 && fieldsData.length > 0) {
-          const sType = result.metadata?.suggested_chart || 'bar';
-          const spec = generateChartSpec(fieldsData, sType);
-          setVizState(prev => ({
-            data: dataArr,
-            fields: fieldsData,
+      if (result.status === 'success' && result.data?.length > 0) {
+        // Dentro de tu handleAskBackend, tras recibir el JSON:
+        const sanitized = result.data.map(item => {
+          const row = {};
+          Object.keys(item).forEach(key => {
+            const val = item[key];
+            // Forzamos conversión numérica para cualquier cosa que parezca una métrica
+            if (/ventas|total|monto|monto|cantidad|precio/i.test(key) || typeof val === 'number') {
+              const num = parseFloat(val);
+              row[key] = isFinite(num) ? num : 0;
+            } else {
+              row[key] = val ?? 'Desconocido';
+            }
+          });
+          return row;
+        });
+
+        const fields = generateFields(sanitized);
+        const sType = result.metadata?.suggested_chart || 'bar';
+        const spec = generateChartSpec(fields, sType);
+
+        // RESET y luego SET con delay
+        setTimeout(() => {
+          setVizState({
+            data: sanitized,
+            fields: fields,
             chart: spec,
             type: sType,
-            key: prev.key + 1
-          }));
-        }
+            key: Date.now()
+          });
+          setLoading(false);
+        }, 250); // Tiempo extra para que el backend libere la conexión
 
-/* Añade la respuesta del asistente */
-        setMessages(prev => [...prev, {
-          role: 'assistant',
-          text: result.answer || (result.data?.length > 0 ? `Se encontraron ${result.data.length} resultados.` : 'Sin resultados.')
-        }]);
+        setMessages(prev => [...prev, { role: 'assistant', text: result.answer }]);
       } else {
-        // Manejo de errores devueltos por la API (status: 'error')
+        setLoading(false);
         setMessages(prev => [...prev, {
           role: 'assistant',
           text: result.answer || 'Lo siento, el servidor devolvió un error desconocido.'
         }]);
       }
     } catch (err) {
+      setLoading(false);
       console.error("Fetch Error:", err);
       setMessages(prev => [...prev, { 
         role: 'assistant', 
         text: `Lo siento, ha ocurrido un problema: ${err.message}.` 
       }]);
-    } finally {
-      setLoading(false);
     }
   }, [prompt, loading, generateFields, generateChartSpec]);
 
@@ -434,20 +448,28 @@ const App = () => {
               ))}
             </div>
             <div className="viz-content">
+              {vizState.data && vizState.data.length > 0 && Array.isArray(vizState.chart) ? (
                 <ErrorBoundary 
                   key={vizState.key}
                   onReset={() => setVizState(prev => ({ ...prev, key: Date.now() }))}
                 >
                   <GraphicWalker
-                    key={vizState.key}
-                    data={vizState.data || []}
+                    key={vizState.key} 
+                    data={vizState.data}
                     fields={vizState.fields}
-                    chart={Array.isArray(vizState.chart) ? vizState.chart : undefined} 
+                    // USAMOS EL OPERADOR OR PARA ASEGURAR QUE SIEMPRE RECIBA UN ARRAY
+                    chart={vizState.chart || []} 
                     dark={theme === 'dark' ? 'dark' : 'light'}
                     colorConfig={CUSTOM_UI_THEME}
                     i18nLang="es-ES"
+                    keepAlive={false} 
                   />
                 </ErrorBoundary>
+              ) : (
+                <div className="viz-placeholder" style={{ padding: '40px', textAlign: 'center' }}>
+                  {loading ? "⏳ Analizando y dibujando..." : "Realiza una consulta para ver resultados."}
+                </div>
+              )}
             </div>
           </>
         ) : (

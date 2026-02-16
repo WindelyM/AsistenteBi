@@ -4,6 +4,16 @@ Bienvenido al **Asistente de Business Intelligence (BI)** alimentado por Intelig
 
 ---
 
+## Acceso al Sistema
+
+El sistema está diseñado para ser accesible vía web a través de un navegador moderno:
+
+-   **URL de Acceso**: `http://localhost` (Puerto 80 estándar).
+-   **Requisitos**: Navegador web actualizado (Chrome, Firefox, Edge, Safari). No requiere instalación de software adicional en el cliente.
+-   **Seguridad**: La aplicación se ejecuta en un entorno aislado (Docker) y protege la base de datos de accesos externos no autorizados.
+
+---
+
 ## Inicio Rápido
 
 1.  **Consulta por Chat**: Escribe tu pregunta en el panel izquierdo (ej: "¿Cuáles son las ventas por categoría?").
@@ -49,4 +59,5 @@ Puedes preguntar por cualquier entidad del sistema (Ventas, Vendedores, Producto
 -   Cambia el tipo de gráfico en la barra superior; a veces los datos se visualizan mejor en un formato específico (ej: pasar de circular a barras).
 
 ### La IA no responde o devuelve error de red
--   Espera unos segundos y vuelve a enviar tu consulta. El sistema tiene límites de cuota inteligentes para garantizar la disponibilidad.
+-   Espera unos segundos y vuelve a enviar tu consulta. El sistema tiene límites de cuota inteligentes para garantizar la disponibilidad de la API de Gemini.
+-   Si el problema persiste, contacta al administrador del sistema.

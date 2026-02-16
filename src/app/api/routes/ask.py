@@ -45,12 +45,16 @@ def get_llm():
     if llm is None:
         print("DEBUG: Inicializando LLM...", flush=True)
         try:
+            # 1. Configuración limpia
             genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
-            # Usamos gemini-flash-latest 
+            
+            # 2. Selección del modelo con el nombre estándar
+            # Usamos gemini-flash-latest como fallback seguro
             llm = ChatGoogleGenerativeAI(
                 model="gemini-flash-latest",
+                google_api_key=os.environ["GOOGLE_API_KEY"],
                 temperature=0,
-                max_retries=1
+                max_retries=0
             )
             print(f"DEBUG: LLM inicializado con modelo: {llm.model}", flush=True)
         except Exception as e:
@@ -134,18 +138,35 @@ def process_data_with_pandas(raw_data: Any) -> List[dict]:
             return []
         
         # Rellenar nulos
-        df = df.fillna("")
-
-        # Convertir object/Decimal a float si es necesario
-        # Iteramos columnas object para ver si contienen Decimals
+        # Convertir object/Decimal a float si es necesario PARA EVITAR casting a string con fillna("")
         import decimal
         for col in df.select_dtypes(include=['object']).columns:
             try:
                 # Si la columna tiene algún decimal.Decimal, intentamos convertir toda la columna a float
+                # Primero convertimos los Decimals a float, ignorando los que ya son float/int/str
                 if df[col].apply(lambda x: isinstance(x, decimal.Decimal)).any():
-                    df[col] = df[col].astype(float)
+                    df[col] = df[col].apply(lambda x: float(x) if isinstance(x, decimal.Decimal) else x)
             except Exception:
-                pass # Si falla, se queda como estaba (probablemente string)
+                pass # Si falla, se queda como estaba
+
+        # Intentar inferir tipos correctos (ej: si una columna object ahora es todo float)
+        df = df.infer_objects()
+
+        # Forzar conversión a numérico para columnas que deberían serlo por nombre
+        numeric_keywords = ['total', 'suma', 'cantidad', 'precio', 'stock', 'costo', 'importe', 'monto', 'valor', 'promedio', 'media']
+        for col in df.columns:
+            if any(key in col.lower() for key in numeric_keywords):
+                try:
+                    df[col] = pd.to_numeric(df[col], errors='coerce')
+                except Exception:
+                    pass
+
+        # Rellenar nulos de columnas numéricas con 0
+        for col in df.select_dtypes(include=['number']).columns:
+            df[col] = df[col].fillna(0)
+
+        # Rellenar resto de nulos con ""
+        df = df.fillna("")
 
         # Formatear fechas a string ISO
         for col in df.select_dtypes(include=['datetime64[ns]', 'datetimetz']).columns:

@@ -1,71 +1,51 @@
-# AsistenteBi — Asistente de BI con Exploración de Datos Interactiva GenBI
+# Asistente BI - Dashboard con IA
 
-Microservicio FastAPI que traduce preguntas en lenguaje natural a consultas SQL
-usando Google Gemini (LangChain).
+Instrucciones de Ejecucion Rapida:
+Este proyecto esta pre-configurado para funcionar de inmediato sin necesidad de configuraciones adicionales.
+1. Requisito: Tener Docker y Docker Compose instalados.
+2. Ejecucion: En la raiz del proyecto, ejecute el comando: sudo docker-compose up --build -d
+3. Acceso: Una vez finalizada la construccion, acceda a: http://localhost
 
-## Requisitos previos
+Resumen del Proyecto:
+Proyecto de Business Intelligence con asistente de IA integrado, dashboard interactivo (GraphicWalker) y arquitectura de microservicios gestionada por Docker y Nginx.
 
-- Python ≥ 3.11
-- PostgreSQL corriendo y con la base de datos `asistentebi` creada
-- Clave de API de Google Gemini
+Arquitectura del Sistema:
+El proyecto utiliza una estructura de microservicios para garantizar la escalabilidad y seguridad:
 
-## Arranque local
+1. Nginx (Gateway): Actua como proxy reverso exponiendo el puerto 80.
+   - http://localhost/ -> Frontend (React + Vite)
+   - http://localhost/api/ -> Backend (FastAPI)
+   - http://localhost/docs -> Documentacion de API (Swagger UI)
+   - http://localhost/health -> Estado del sistema
 
-```bash
-# 1. Clonar y entrar
-git clone <repo-url> && cd AsistenteBi
+2. Frontend: Contenedor Nginx Alpine sirviendo la build optimizada de React. No esta expuesto directamente al exterior.
 
-# 2. Crear entorno virtual e instalar dependencias
-python -m venv venv
-source venv/bin/activate
-pip install -e ".[dev]"
+3. API: Microservicio desarrollado en Python con FastAPI. Gestiona la comunicacion con Google Gemini para la traduccion de lenguaje natural a SQL.
 
-# 3. Configurar variables de entorno
-cp .env.example .env
-# Edita .env con tus valores reales
+4. Base de Datos: PostgreSQL 15. Aislada en la red interna de Docker. Incluye un sistema de persistencia mediante volumenes y auto-poblacion automatica con 10,000 registros para pruebas inmediatas.
 
-# 4. Arrancar el servidor
-uvicorn src.app.main:app --reload
+Instalacion y Despliegue:
 
-# 5. Comprobar que funciona
-curl http://localhost:8000/health
-```
+1. Clonar el repositorio:
+   git clone <url-del-repositorio>
+   cd AsistenteBi
 
-## Arranque con Docker
+2. Variables de Entorno:
+   El archivo .env.example ya contiene llaves de prueba operativas. Para entornos de produccion, cree un archivo .env basado en este:
+   cp .env.example .env
 
-```bash
-# 1. Configurar variables
-cp .env.example .env
-# Edita .env
+3. Despliegue de Contenedores:
+   sudo docker-compose up --build -d
 
-# 2. Construir y arrancar
-docker compose up --build
+El servicio de la API implementa un healthcheck que espera a que la base de datos este completamente disponible antes de iniciar el servidor web.
 
-# 3. Comprobar
-curl http://localhost:8000/health
-```
+Seguridad:
+- Los servicios internos (Base de Datos, API, Frontend) no exponen puertos al host, centralizando todo el trafico a traves de Nginx en el puerto 80.
+- El frontend se sirve como archivos estaticos optimizados, eliminando la necesidad de servidores de desarrollo en el despliegue final.
 
-## Tests
-
-```bash
-python -m pytest tests/ -v
-```
-
-## Estructura del proyecto
-
-```
-pyproject.toml          # dependencias y config
-Dockerfile              # imagen del microservicio
-docker-compose.yml      # arranque con Docker
-.env.example            # variables de entorno (ejemplo)
-src/
-  app/
-    main.py             # punto de entrada FastAPI
-    core/
-      settings.py       # configuración desde entorno
-    api/
-      routes/
-        health.py       # GET /health
-tests/
-  test_health.py        # test de integración
-```
+Estructura del Proyecto:
+- /src: Codigo fuente del Backend (FastAPI).
+- /frontend-bi: Codigo fuente del Frontend (React).
+- /nginx: Configuracion del Proxy Reverso.
+- docker-compose.yml: Orquestacion de servicios.
+- manual_usuario.md: Documentacion utilizada por la IA para el contexto de consultas.

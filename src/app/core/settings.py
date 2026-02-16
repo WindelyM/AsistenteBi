@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     app_debug: bool = False
     
     # Configuración de base de datos
-    database_url: str = "postgresql+psycopg2://postgres:postgres@127.0.0.1:5432/asistentebi"
+    database_url: str = "postgresql+psycopg2://postgres:postgres@db:5432/asistentebi"
     
     # Configuración de Google Gemini
     google_api_key: str = ""

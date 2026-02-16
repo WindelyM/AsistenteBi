@@ -19,12 +19,18 @@ def create_app() -> FastAPI:
     from app.core.database import SessionLocal
     try:
         db = SessionLocal()
-        if db.query(models.Categoria).count() == 0:
+        # Verificar si la base de datos está vacía sin mantener la sesión abierta
+        is_empty = False
+        try:
+            is_empty = db.query(models.Categoria).count() == 0
+        finally:
+            db.close()
+        
+        if is_empty:
             print("Base de datos vacía detectada. Iniciando carga de datos de ejemplo (Seed)...")
             from app.seed import populate_db
             populate_db()
             print("Datos de ejemplo cargados correctamente.")
-        db.close()
     except Exception as e:
         print(f"Error en auto-seed: {e}")
 
