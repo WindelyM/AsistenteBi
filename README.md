@@ -1,3 +1,5 @@
+<img width="1919" height="1079" alt="image" src="https://github.com/user-attachments/assets/bd7a0f06-190b-4a8e-90ad-7a1baef7b402" />
+
 # Asistente BI - Dashboard con IA
 
 Instrucciones de Ejecucion Rapida:
