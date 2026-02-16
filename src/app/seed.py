@@ -11,6 +11,9 @@ from sqlalchemy.orm import Session
 # Importar modelos
 from app.core.database import SessionLocal, engine, Base
 from app import models
+from app.core.settings import settings
+
+
 
 # Cargar variables de entorno
 load_dotenv()
@@ -18,11 +21,20 @@ load_dotenv()
 # Función para poblar la base de datos
 def populate_db():
     print("Recreating database schema...")
-    Base.metadata.drop_all(bind=engine)
+    if settings.database_url:
+        print("Database URL: ", settings.database_url)
+    else:
+        print("No database URL found")
+    
+
+
+
+    print("Database schema dropped.")
     Base.metadata.create_all(bind=engine)
+    print("Database schema created.")
 
     # Crear una sesión de base de datos
-    db = SessionLocal()
+    db = SessionLocal(bind=engine)
     try:
         print("Seeding data...")
 
