@@ -2,16 +2,16 @@
 
 # Asistente BI - Dashboard con IA
 
-Instrucciones de Ejecucion Rapida:
+# Instrucciones de Ejecucion Rapida:
 Este proyecto esta pre-configurado para funcionar de inmediato sin necesidad de configuraciones adicionales.
 1. Requisito: Tener Docker y Docker Compose instalados.
 2. Ejecucion: En la raiz del proyecto, ejecute el comando: sudo docker-compose up --build -d
 3. Acceso: Una vez finalizada la construccion, acceda a: http://localhost
 
-Resumen del Proyecto:
+# Resumen del Proyecto:
 Proyecto de Business Intelligence con asistente de IA integrado, dashboard interactivo (GraphicWalker) y arquitectura de microservicios gestionada por Docker y Nginx.
 
-Arquitectura del Sistema:
+# Arquitectura del Sistema:
 El proyecto utiliza una estructura de microservicios para garantizar la escalabilidad y seguridad:
 
 1. Nginx (Gateway): Actua como proxy reverso exponiendo el puerto 80.
@@ -26,7 +26,7 @@ El proyecto utiliza una estructura de microservicios para garantizar la escalabi
 
 4. Base de Datos: PostgreSQL 15. Aislada en la red interna de Docker. Incluye un sistema de persistencia mediante volumenes y auto-poblacion automatica con 10,000 registros para pruebas inmediatas.
 
-Instalacion y Despliegue:
+# Instalacion y Despliegue:
 
 1. Clonar el repositorio:
    git clone <url-del-repositorio>
@@ -41,11 +41,11 @@ Instalacion y Despliegue:
 
 El servicio de la API implementa un healthcheck que espera a que la base de datos este completamente disponible antes de iniciar el servidor web.
 
-Seguridad:
+# Seguridad:
 - Los servicios internos (Base de Datos, API, Frontend) no exponen puertos al host, centralizando todo el trafico a traves de Nginx en el puerto 80.
 - El frontend se sirve como archivos estaticos optimizados, eliminando la necesidad de servidores de desarrollo en el despliegue final.
 
-Estructura del Proyecto:
+# Estructura del Proyecto:
 - /src: Codigo fuente del Backend (FastAPI).
 - /frontend-bi: Codigo fuente del Frontend (React).
 - /nginx: Configuracion del Proxy Reverso.
