@@ -1,19 +1,30 @@
-<img width="1919" height="1079" alt="image" src="https://github.com/user-attachments/assets/bd7a0f06-190b-4a8e-90ad-7a1baef7b402" />
-
 # Asistente BI - Dashboard con IA
+
+---
+
+## Requisito Crítico: Clave de API
+
+Para que las funciones de Inteligencia Artificial (traducción de lenguaje natural a SQL) operen correctamente, **es obligatorio contar con una API Key de Google Gemini**.
+
+1.  Obtenga su clave gratuita en: [Google AI Studio](https://aistudio.google.com/app/apikey)
+2.  Cree un archivo llamado `.env` en la raíz del proyecto basándose en el archivo `.env.example`.
+3.  Pegue su clave en la variable: `APP_GOOGLE_API_KEY=su_clave_aqui`
+
+*Sin esta clave, el sistema de contenedores iniciará pero el asistente de chat devolverá errores de conexión.*
 
 ---
 
 ## Instrucciones de Ejecución Rápida
 
-Este proyecto está pre-configurado para funcionar de inmediato sin necesidad de configuraciones adicionales.
+Este proyecto está pre-configurado para funcionar mediante contenedores.
 
 1.  **Requisito:** Tener Docker y Docker Compose instalados.
-2.  **Ejecución:** En la raíz del proyecto, ejecute el comando:
+2.  **Preparación:** Asegúrese de haber creado su archivo `.env` con la API Key.
+3.  **Ejecución:** En la raíz del proyecto, ejecute en su terminal:
     ```bash
     sudo docker-compose up --build -d
     ```
-3.  **Acceso:** Una vez finalizada la construcción, acceda a: **[http://localhost](http://localhost)**
+4.  **Acceso:** Una vez finalizada la construcción, acceda a: **http://localhost**
 
 ---
 
@@ -28,45 +39,35 @@ Proyecto de Business Intelligence con asistente de IA integrado, dashboard inter
 El proyecto utiliza una estructura de microservicios para garantizar la escalabilidad y seguridad:
 
 1.  **Nginx (Gateway):** Actúa como proxy reverso exponiendo el puerto 80.
-    *   `http://localhost/` -> Frontend (React + Vite)
-    *   `http://localhost/api/` -> Backend (FastAPI)
-    *   `http://localhost/docs` -> Documentación de API (Swagger UI)
-    *   `http://localhost/health` -> Estado del sistema
+    *   http://localhost/ -> Frontend (React + Vite)
+    *   http://localhost/api/ -> Backend (FastAPI)
+    *   http://localhost/docs -> Documentación de API (Swagger UI)
+    *   http://localhost/health -> Estado del sistema
 
-2.  **Frontend:** Contenedor Nginx Alpine sirviendo la build optimizada de React. No está expuesto directamente al exterior.
+2.  **Frontend:** Contenedor Nginx Alpine sirviendo la build optimizada de React.
 
-3.  **API:** Microservicio desarrollado en Python con FastAPI. Gestiona la comunicación con Google Gemini para la traducción de lenguaje natural a SQL.
+3.  **API:** Microservicio desarrollado en Python con FastAPI. Gestiona la comunicación con Google Gemini.
 
-4.  **Base de Datos:** PostgreSQL 15. Aislada en la red interna de Docker. Incluye un sistema de persistencia mediante volúmenes y auto-población automática con 10,000 registros para pruebas inmediatas.
-
----
-
-## Instalación y Despliegue
-
-1.  **Clonar el repositorio:**
-    ```bash
-    git clone <url-del-repositorio>
-    cd AsistenteBi
-    ```
-
-2.  **Variables de Entorno:**
-    El archivo `.env.example` ya contiene llaves de prueba operativas. Para entornos de producción, cree un archivo `.env` basado en este:
-    ```bash
-    cp .env.example .env
-    ```
-
-3.  **Despliegue de Contenedores:**
-    ```bash
-    sudo docker-compose up --build -d
-    ```
-    *El servicio de la API implementa un healthcheck que espera a que la base de datos esté completamente disponible antes de iniciar el servidor web.*
+4.  **Base de Datos:** PostgreSQL 15. Incluye auto-población automática con 10,000 registros para pruebas inmediatas.
 
 ---
 
-## Seguridad
+## Configuración de Variables de Entorno
 
-*   Los servicios internos (Base de Datos, API, Frontend) no exponen puertos al host, centralizando todo el tráfico a través de Nginx en el puerto 80.
-*   El frontend se sirve como archivos estáticos optimizados, eliminando la necesidad de servidores de desarrollo en el despliegue final.
+El archivo `.env` es fundamental para el despliegue. Asegúrese de configurar los siguientes valores:
+
+*   `POSTGRES_USER`: Usuario de la base de datos (por defecto: postgres).
+*   `POSTGRES_PASSWORD`: Contraseña de la base de datos.
+*   `APP_GOOGLE_API_KEY`: Su clave de Google Gemini (Requerido).
+*   `APP_DEBUG`: Establecer en False para entornos de demo/producción.
+
+---
+
+## Seguridad y Persistencia
+
+*   **Aislamiento de Red:** Los servicios internos no exponen puertos al host, centralizando todo el tráfico a través de Nginx.
+*   **Persistencia de Datos:** Utiliza volúmenes de Docker para asegurar que los 10,000 registros generados no se borren al reiniciar los contenedores.
+*   **Gestión de Claves:** El archivo `.env` está incluido en el .gitignore para evitar filtraciones accidentales de credenciales.
 
 ---
 

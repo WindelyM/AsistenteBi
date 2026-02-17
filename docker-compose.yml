@@ -28,7 +28,7 @@ services:
       - APP_POSTGRES_HOST=db
       - APP_DATABASE_URL=postgresql+psycopg2://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-Windely16}@db:5432/${POSTGRES_DB:-asistentebi}
       - APP_DEBUG=${APP_DEBUG:-True}
-      - APP_GOOGLE_API_KEY=${APP_GOOGLE_API_KEY:-AIzaSyDeBC4p3w7mLEzzOIi9q_S7u52HrK1hq8s}
+      - APP_GOOGLE_API_KEY=${APP_GOOGLE_API_KEY}
     depends_on:
       db:
         condition: service_healthy
